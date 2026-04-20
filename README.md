@@ -35,7 +35,7 @@ The package reuses Optimizely Graph's existing configuration. Make sure you alre
 
 After install, log in to the CMS as an administrator and click the new **Search** menu item. You'll find two tabs:
 
-- **Best Bets** — pin specific CMS content to the top of the search results for chosen phrases. Per site, per language.
+- **Pinned Results** — pin specific CMS content to the top of the search results for chosen phrases. Per site, per language. Previously called Best Bet in Search & Navigation.
 - **Synonyms** — define one-way (`a => b`) and bidirectional (`a, b`) term equivalences. Per site, per language. Import/export the CMS 12 CSV format directly.
 
 ## Authorization

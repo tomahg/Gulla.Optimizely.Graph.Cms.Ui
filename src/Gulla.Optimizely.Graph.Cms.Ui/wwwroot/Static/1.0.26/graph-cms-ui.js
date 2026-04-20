@@ -174,7 +174,7 @@
 
     function openOptimizelyContentDialog() {
         if (typeof window.require !== 'function') {
-            console.error('[Gulla.Graph.Cms.Ui] window.require is not defined. ' +
+            console.error('[Gulla.Optimizely.Graph.Cms.Ui] window.require is not defined. ' +
                 'Check that Gulla.Optimizely.Graph.Cms.Ui is registered as a module in ' +
                 'modules/_protected/Gulla.Optimizely.Graph.Cms.Ui/module.config and that the ' +
                 'site was restarted. Scripts currently on the page: ',

@@ -1,0 +1,65 @@
+html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #222; background: #fff; }
+
+.gulla-graph-ui { font-size: 14px; line-height: 1.45; }
+
+.gulla-toolbar { display: flex; align-items: center; gap: .5rem; padding: .75rem 2rem; border-bottom: 1px solid #eee; background: #fafafa; justify-content: flex-end; }
+.gulla-toolbar__label { color: #555; }
+.gulla-toolbar__select { background: #ddd; border: 0; border-radius: 3px; padding: .25rem .5rem; font-size: 14px; }
+
+.gulla-page { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+.gulla-page__title { font-weight: 400; font-size: 2rem; margin: 0 0 .25rem; }
+.gulla-page__lead { color: #555; margin: 0 0 1.5rem; }
+
+.gulla-tabs { display: flex; gap: 2rem; border-bottom: 1px solid #ddd; margin-bottom: 2rem; }
+.gulla-tab { background: none; border: 0; padding: .75rem 0; font-size: 1rem; color: #666; cursor: pointer; border-bottom: 2px solid transparent; }
+.gulla-tab[aria-selected="true"] { color: #2a2a2a; border-bottom-color: #4a3aff; }
+
+.gulla-section__lead { color: #444; margin-bottom: 1.5rem; }
+
+.gulla-form { display: grid; gap: 1rem; margin-bottom: 2rem; }
+.gulla-form__row { display: grid; grid-template-columns: 140px 1fr; align-items: center; gap: 1rem; }
+.gulla-form__row--checkbox { grid-template-columns: 140px auto 1fr; gap: .5rem; }
+.gulla-form__label { color: #444; text-align: right; }
+.gulla-form__field { display: flex; flex-direction: column; }
+.gulla-form__checkbox { width: 1rem; height: 1rem; margin: 0; justify-self: start; }
+.gulla-form__field--inline { flex-direction: row; gap: .5rem; }
+.gulla-form__input { width: 100%; padding: .4rem .5rem; border: 1px solid #ccc; border-radius: 2px; font-size: 14px; }
+.gulla-form__input--small { width: 6rem; }
+.gulla-form__hint { color: #888; font-size: 12px; align-self: flex-end; }
+.gulla-form__actions { display: flex; gap: .5rem; justify-content: flex-end; }
+
+.gulla-button { display: inline-flex; align-items: center; gap: .25rem; padding: .4rem .9rem; background: #fff; border: 1px solid #ccc; border-radius: 2px; cursor: pointer; font-size: 14px; color: #222; text-decoration: none; }
+.gulla-button:hover { background: #f5f5f5; }
+.gulla-button--primary { background: #c9c2ff; border-color: #b0a8ff; }
+.gulla-button--primary:hover { background: #b6acff; }
+
+.gulla-list-header { display: flex; justify-content: space-between; align-items: center; margin: 2rem 0 .75rem; }
+.gulla-list-header__title { font-size: 1.5rem; font-weight: 400; margin: 0; }
+.gulla-search { padding: .35rem .5rem; border: 1px solid #ccc; border-radius: 2px; }
+
+.gulla-list { border: 1px solid #eee; }
+.gulla-list__empty { padding: 2rem; text-align: center; color: #888; background: #f5f3ee; }
+.gulla-list__row { padding: 1rem 1.25rem; border-bottom: 1px solid #eee; }
+.gulla-list__row:nth-child(even) { background: #f5f3ee; }
+.gulla-list__row-title { font-weight: 600; margin-bottom: .25rem; }
+.gulla-list__row-body { color: #444; margin-bottom: .5rem; }
+.gulla-list__chips { display: flex; flex-wrap: wrap; gap: .25rem; }
+.gulla-chip { background: #9b9b9b; color: #fff; padding: .15rem .5rem; border-radius: 2px; font-size: 12px; }
+.gulla-list__row-actions { float: right; }
+
+.gulla-table { width: 100%; border-collapse: collapse; }
+.gulla-table th, .gulla-table td { text-align: left; padding: .65rem 1rem; border-bottom: 1px solid #eee; }
+.gulla-table tbody tr:nth-child(even) { background: #f5f3ee; }
+.gulla-table__direction { width: 4rem; text-align: center; }
+.gulla-table__empty td { text-align: center; color: #888; padding: 1.5rem; background: #f5f3ee; }
+.gulla-direction-icon { display: inline-block; width: 1.5rem; height: 1.5rem; line-height: 1.5rem; border-radius: 50%; background: #b8b8b8; color: #fff; text-align: center; font-size: 14px; }
+
+.gulla-actions-row { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+
+.gulla-picker__selected-url { color: #888; font-size: 12px; margin-top: .25rem; }
+.gulla-form__row--hint { margin-top: -.5rem; }
+
+.gulla-slot-row { display: flex; align-items: center; gap: .5rem; margin: 0 0 1.5rem; }
+.gulla-slot-row__label { color: #444; }
+.gulla-slot-row__hint { color: #888; font-size: 12px; }
+.gulla-slot-row__hint code { background: #eee; padding: 1px 4px; border-radius: 2px; font-size: 11px; }

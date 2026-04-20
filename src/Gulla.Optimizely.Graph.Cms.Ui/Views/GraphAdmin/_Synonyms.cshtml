@@ -1,0 +1,79 @@
+@{
+    Layout = null;
+}
+<p class="gulla-section__lead">
+    Search terms can be expanded with terms from this synonym list. If you search for
+    &ldquo;vegetables&rdquo; and the synonym is &ldquo;fruit&rdquo;, results for
+    &ldquo;fruit&rdquo; will also be displayed. Note that changes to synonyms may take a
+    few minutes before they are in effect.
+</p>
+
+<div class="gulla-slot-row">
+    <span class="gulla-slot-row__label">Slot</span>
+    <select id="gulla-syn-slot" class="gulla-toolbar__select">
+        <option value="one">One</option>
+        <option value="two">Two</option>
+    </select>
+    <span class="gulla-slot-row__hint">
+        Optimizely Graph exposes two synonym slots per language. Choose which slot your
+        GraphQL queries reference with <code>synonyms: [ONE]</code> or <code>synonyms: [TWO]</code>.
+    </span>
+</div>
+
+<form id="gulla-syn-form" class="gulla-form">
+    <div class="gulla-form__row">
+        <label for="gulla-syn-phrases" class="gulla-form__label">Phrases</label>
+        <div class="gulla-form__field">
+            <input id="gulla-syn-phrases" type="text" class="gulla-form__input" />
+            <small class="gulla-form__hint">Separate multiple phrases with comma</small>
+        </div>
+    </div>
+
+    <div class="gulla-form__row">
+        <label for="gulla-syn-synonym" class="gulla-form__label">Synonym</label>
+        <div class="gulla-form__field">
+            <input id="gulla-syn-synonym" type="text" class="gulla-form__input" />
+        </div>
+    </div>
+
+    <div class="gulla-form__row gulla-form__row--checkbox">
+        <span class="gulla-form__label">Bidirectional</span>
+        <div class="gulla-form__field">
+            <input id="gulla-syn-bidi" type="checkbox" class="gulla-form__checkbox" />
+        </div>
+    </div>
+
+    <div class="gulla-form__actions">
+        <button type="submit" class="gulla-button gulla-button--primary">Add synonym</button>
+        <button type="reset" class="gulla-button">Cancel</button>
+    </div>
+</form>
+
+<div class="gulla-list-header">
+    <h2 class="gulla-list-header__title">Synonyms</h2>
+    <input type="search" id="gulla-syn-filter" class="gulla-search" placeholder="Search" />
+</div>
+
+<table class="gulla-table" id="gulla-syn-list">
+    <thead>
+        <tr>
+            <th>Phrases</th>
+            <th class="gulla-table__direction"></th>
+            <th>Synonym</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="gulla-table__empty"><td colspan="4">No synonyms yet</td></tr>
+    </tbody>
+</table>
+
+<div class="gulla-actions-row">
+    <form id="gulla-syn-import-form" class="gulla-actions-row__import">
+        <label class="gulla-button">
+            <span>&#x21A5; Import Synonym</span>
+            <input id="gulla-syn-import-file" type="file" accept=".csv" hidden />
+        </label>
+    </form>
+    <a id="gulla-syn-export" class="gulla-button" href="#">&#x21A7; Export Synonym</a>
+</div>

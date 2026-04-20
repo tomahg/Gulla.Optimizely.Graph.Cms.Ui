@@ -1,0 +1,23 @@
+<Project>
+
+  <!--
+    Copies the module.config packaged with Gulla.Optimizely.Graph.Cms.Ui into the consuming
+    site's modules/_protected/Gulla.Optimizely.Graph.Cms.Ui/ folder. This registers the addon
+    as an Optimizely module with declared dependencies on the Shell and CMS modules, which is
+    what causes the shell's Dojo bootstrap + epi-cms widgets to load on the admin page —
+    required for the built-in content selector dialog to work.
+  -->
+
+  <Target Name="CopyGullaGraphCmsUiModuleConfig"
+          BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <_GullaGraphCmsUiModuleConfigSource>$(MSBuildThisFileDirectory)..\contentFiles\any\any\modules\_protected\Gulla.Optimizely.Graph.Cms.Ui\module.config</_GullaGraphCmsUiModuleConfigSource>
+      <_GullaGraphCmsUiModuleConfigTarget>$(MSBuildProjectDirectory)\modules\_protected\Gulla.Optimizely.Graph.Cms.Ui\module.config</_GullaGraphCmsUiModuleConfigTarget>
+    </PropertyGroup>
+    <Copy SourceFiles="$(_GullaGraphCmsUiModuleConfigSource)"
+          DestinationFiles="$(_GullaGraphCmsUiModuleConfigTarget)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_GullaGraphCmsUiModuleConfigSource)')" />
+  </Target>
+
+</Project>

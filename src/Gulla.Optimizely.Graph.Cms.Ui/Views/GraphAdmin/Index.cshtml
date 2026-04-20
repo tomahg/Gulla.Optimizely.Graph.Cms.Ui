@@ -1,0 +1,82 @@
+@using EPiServer.Framework.Web
+@using EPiServer.Framework.Web.Resources
+@inject IRequiredClientResourceList RequiredResources
+@model GraphAdminViewModel
+@{
+    Layout = null;
+    var assets = "/_content/Gulla.Optimizely.Graph.Cms.Ui/Static/1.0.25/";
+
+    // Bring in Optimizely's Dojo runtime + epi-cms widgets (the ContentSelectorDialog lives
+    // in epi-cms/widget/). Both bundles are required explicitly because our page is not an
+    // Optimizely module, so the module-level <moduleDependencies> chain (which normally
+    // pulls Shell in when CMS is active) doesn't fire. Shell's widgets.js MUST load before
+    // CMS's widgets.js — the order of Require() calls determines script emission order.
+    RequiredResources.Require("epi.shell.ui");          // Dojo bootstrap + epi/shell modules
+    RequiredResources.Require("epi-cms.widgets.base");  // epi-cms modules (incl. ContentSelectorDialog)
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Optimization &mdash; Graph</title>
+    <link rel="stylesheet" href="@assets/graph-cms-ui.css" />
+    <required-client-resources area="@RenderingTags.Header" />
+</head>
+<body class="gulla-graph-ui">
+    @Html.AntiForgeryToken()
+    @* The shell's React navigation bundle reads settings (including the antiforgery form
+       field name) from this element's data-epi-common-settings attribute. Without it, axios
+       skips setting the RequestVerificationToken header and background polls 400. *@
+    <div id="episerver-common-settings-container"
+         data-epi-common-settings='{"antiforgeryFormFieldName":"__RequestVerificationToken","antiforgeryHeaderName":"RequestVerificationToken","shellModuleUrl":"/episerver/Shell","cmsModuleUrl":"/episerver/CMS","modules":[]}'
+         hidden></div>
+    <platform-navigation />
+    <platform-navigation-wrapper>
+        <div class="gulla-toolbar">
+            <span class="gulla-toolbar__label">For</span>
+            <select id="gulla-site-select" class="gulla-toolbar__select">
+                @foreach (var site in Model.Sites)
+                {
+                    <option value="@site.Key" selected="@(site.Key == Model.SelectedSiteKey)">@site.Name</option>
+                }
+            </select>
+            <span class="gulla-toolbar__label">in</span>
+            <select id="gulla-lang-select" class="gulla-toolbar__select">
+                @foreach (var lang in Model.Languages)
+                {
+                    <option value="@lang" selected="@(lang == Model.SelectedLanguage)">@lang</option>
+                }
+            </select>
+        </div>
+
+        <div class="gulla-page">
+            <h1 class="gulla-page__title">Graph Optimization</h1>
+            <p class="gulla-page__lead">
+                Apply search optimization features to finetune search on your websites,
+                helping visitors find what they are looking for.
+            </p>
+
+            <nav class="gulla-tabs" role="tablist">
+                <button type="button" class="gulla-tab" data-tab="best-bets" role="tab">Pinned Results</button>
+                <button type="button" class="gulla-tab" data-tab="synonyms" role="tab">Synonyms</button>
+            </nav>
+
+            <section id="gulla-tab-best-bets" class="gulla-tab-panel" role="tabpanel">
+                @await Html.PartialAsync("_PinnedResults")
+            </section>
+
+            <section id="gulla-tab-synonyms" class="gulla-tab-panel" role="tabpanel" hidden>
+                @await Html.PartialAsync("_Synonyms")
+            </section>
+        </div>
+    </platform-navigation-wrapper>
+
+    <script>
+        window.gullaGraphUi = {
+            initialTab: '@Html.Raw(Model.ActiveTab)'
+        };
+    </script>
+    <script src="@assets/graph-cms-ui.js"></script>
+    <required-client-resources area="@RenderingTags.Footer" />
+</body>
+</html>

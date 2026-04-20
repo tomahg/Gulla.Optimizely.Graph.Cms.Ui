@@ -1,0 +1,52 @@
+@{
+    Layout = null;
+}
+<p class="gulla-section__lead">
+    Use pinned results, previously called best bets, to create a custom list of matching
+    content for common search phrases. Pinned results are presented at the beginning of
+    the search results.
+</p>
+
+<form id="gulla-pinned-form" class="gulla-form">
+    <div class="gulla-form__row">
+        <label for="gulla-pinned-phrases" class="gulla-form__label">Phrases</label>
+        <div class="gulla-form__field">
+            <input id="gulla-pinned-phrases" type="text" class="gulla-form__input" />
+            <small class="gulla-form__hint">Separate multiple phrases with comma</small>
+        </div>
+    </div>
+
+    <div class="gulla-form__row">
+        <label for="gulla-pinned-target-display" class="gulla-form__label">Target content</label>
+        <div class="gulla-form__field gulla-form__field--inline gulla-picker">
+            <input id="gulla-pinned-target-display" type="text" class="gulla-form__input" readonly />
+            <input id="gulla-pinned-target" type="hidden" />
+            <button type="button" id="gulla-pinned-target-pick" class="gulla-button" title="Select content">&hellip;</button>
+        </div>
+    </div>
+    <div class="gulla-form__row gulla-form__row--hint">
+        <span></span>
+        <div id="gulla-pinned-target-selected" class="gulla-picker__selected-url" hidden></div>
+    </div>
+
+    <div class="gulla-form__row">
+        <label for="gulla-pinned-priority" class="gulla-form__label">Priority</label>
+        <div class="gulla-form__field">
+            <input id="gulla-pinned-priority" type="number" min="1" value="1" class="gulla-form__input gulla-form__input--small" />
+        </div>
+    </div>
+
+    <div class="gulla-form__actions">
+        <button type="submit" class="gulla-button gulla-button--primary">Add best bet</button>
+        <button type="reset" class="gulla-button">Cancel</button>
+    </div>
+</form>
+
+<div class="gulla-list-header">
+    <h2 class="gulla-list-header__title">Best Bets</h2>
+    <input type="search" id="gulla-pinned-filter" class="gulla-search" placeholder="Search" />
+</div>
+
+<div id="gulla-pinned-list" class="gulla-list">
+    <div class="gulla-list__empty">There are no best bets yet</div>
+</div>

@@ -1,5 +1,6 @@
 @using EPiServer.Framework.Web
 @using EPiServer.Framework.Web.Resources
+@using EPiServer.Shell.UI.WebComponents
 @inject IRequiredClientResourceList RequiredResources
 @model GraphAdminViewModel
 @{
@@ -21,6 +22,7 @@
     <title>Optimization &mdash; Graph</title>
     <link rel="stylesheet" href="@assets/graph-cms-ui.css" />
     <required-client-resources area="@RenderingTags.Header" />
+    @Html.Raw(Html.RegisterOptimizelyWebComponents())
 </head>
 <body class="gulla-graph-ui">
     @Html.AntiForgeryToken()

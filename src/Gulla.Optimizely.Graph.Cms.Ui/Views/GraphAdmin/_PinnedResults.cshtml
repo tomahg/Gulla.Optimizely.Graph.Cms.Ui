@@ -18,15 +18,10 @@
 
     <div class="gulla-form__row">
         <label for="gulla-pinned-target-display" class="gulla-form__label">Target content</label>
-        <div class="gulla-form__field gulla-form__field--inline gulla-picker">
-            <input id="gulla-pinned-target-display" type="text" class="gulla-form__input" readonly />
+        <div class="gulla-form__field">
+            <optimizely-content-tree id="content-tree"></optimizely-content-tree>
             <input id="gulla-pinned-target" type="hidden" />
-            <button type="button" id="gulla-pinned-target-pick" class="gulla-button" title="Select content">&hellip;</button>
         </div>
-    </div>
-    <div class="gulla-form__row gulla-form__row--hint">
-        <span></span>
-        <div id="gulla-pinned-target-selected" class="gulla-picker__selected-url" hidden></div>
     </div>
 
     <div class="gulla-form__row">

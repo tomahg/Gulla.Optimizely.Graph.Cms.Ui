@@ -45,7 +45,8 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 .gulla-list__row-body { color: #444; margin-bottom: .5rem; }
 .gulla-list__chips { display: flex; flex-wrap: wrap; gap: .25rem; }
 .gulla-chip { background: #9b9b9b; color: #fff; padding: .15rem .5rem; border-radius: 2px; font-size: 12px; }
-.gulla-list__row-actions { float: right; }
+.gulla-list__row-actions { float: right; display: flex; gap: .5rem; }
+.gulla-list__row.gulla-list__row--editing { background: #efecff; box-shadow: inset 3px 0 0 #b0a8ff; }
 
 .gulla-table { width: 100%; border-collapse: collapse; }
 .gulla-table th, .gulla-table td { text-align: left; padding: .65rem 1rem; border-bottom: 1px solid #eee; }
@@ -63,3 +64,10 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 .gulla-slot-row__label { color: #444; }
 .gulla-slot-row__hint { color: #888; font-size: 12px; }
 .gulla-slot-row__hint code { background: #eee; padding: 1px 4px; border-radius: 2px; font-size: 11px; }
+
+/* Best bet rows: linked target URL, and the disabled state set by the Enable/Disable button. */
+.gulla-list__row-url { margin-bottom: .25rem; }
+.gulla-list__row-url a { color: #4a41c4; text-decoration: none; }
+.gulla-list__row-url a:hover { text-decoration: underline; }
+.gulla-list__row.gulla-list__row--disabled { opacity: .55; }
+.gulla-badge { background: #6b6b6b; color: #fff; padding: .1rem .4rem; border-radius: 2px; font-size: 11px; font-weight: 400; vertical-align: middle; }

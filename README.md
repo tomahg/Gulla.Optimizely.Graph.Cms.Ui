@@ -40,7 +40,26 @@ After install, log in to the CMS as an administrator and click the new **Search*
 
 ## Authorization
 
-By default the UI requires the `CmsAdmins`, `Administrators`, or `WebAdmins` role. Pass a custom `AuthorizationOptions` action to `AddGraphCmsUi()` to override.
+Access is controlled by the `GraphCmsUiAuthorizationPolicy.Default` policy. By default it requires the
+`CmsAdmins`, `Administrators`, or `WebAdmins` role. Override it by passing an `AuthorizationOptions`
+action to `AddGraphCmsUi()`:
+
+```csharp
+services.AddGraphCmsUi(auth =>
+{
+    auth.AddPolicy(GraphCmsUiAuthorizationPolicy.Default, policy =>
+    {
+        policy.RequireRole("SearchAdmins");
+    });
+});
+```
+
+The default policy is registered as a `PostConfigure`, so a policy you define yourself always wins —
+and the policy always exists even if `AddGraphCmsUi()` is never called, so the site never
+fails to start with `No policy found: GraphCmsUiAdmin`.
+
+Using Opti ID you will probably also need `policy.AddAuthenticationSchemes(OptimizelyIdentityDefaults.SchemeName);`
+inside the policy.
 
 ## Limitations (inherited from Optimizely Graph)
 

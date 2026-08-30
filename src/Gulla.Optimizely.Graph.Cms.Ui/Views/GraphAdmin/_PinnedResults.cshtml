@@ -17,10 +17,13 @@
     </div>
 
     <div class="gulla-form__row">
-        <label for="gulla-pinned-target-display" class="gulla-form__label">Target content</label>
+        <label class="gulla-form__label">Target content</label>
         <div class="gulla-form__field">
             <optimizely-content-tree id="content-tree"></optimizely-content-tree>
             <input id="gulla-pinned-target" type="hidden" />
+            @* Shown while editing: the component always mounts with no selection, so this is
+               the only way to tell the editor which content the best bet currently points at. *@
+            <div id="gulla-pinned-target-current" class="gulla-form__hint" hidden></div>
         </div>
     </div>
 
@@ -32,16 +35,16 @@
     </div>
 
     <div class="gulla-form__actions">
-        <button type="submit" class="gulla-button gulla-button--primary">Add best bet</button>
-        <button type="reset" class="gulla-button">Cancel</button>
+        <button type="submit" id="gulla-pinned-submit" class="gulla-button gulla-button--primary">Add best bet</button>
+        <button type="button" id="gulla-pinned-cancel" class="gulla-button">Cancel</button>
     </div>
 </form>
 
 <div class="gulla-list-header">
-    <h2 class="gulla-list-header__title">Best Bets</h2>
+    <h2 class="gulla-list-header__title">Pinned Results</h2>
     <input type="search" id="gulla-pinned-filter" class="gulla-search" placeholder="Search" />
 </div>
 
 <div id="gulla-pinned-list" class="gulla-list">
-    <div class="gulla-list__empty">There are no best bets yet</div>
+    <div class="gulla-list__empty">There are no pinned results yet</div>
 </div>

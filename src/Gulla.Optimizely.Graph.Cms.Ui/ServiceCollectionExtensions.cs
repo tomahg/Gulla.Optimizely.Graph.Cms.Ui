@@ -65,13 +65,33 @@ namespace Gulla.Optimizely.Graph.Cms.Ui
             {
                 services.AddAuthorization(authorizationOptions);
             }
-            else
+
+            services.AddDefaultGraphCmsUiAuthorizationPolicy();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the default authorization policy unless one with the same name already exists.
+        /// Runs as a <c>PostConfigure</c>, so a policy the site defines itself — through the
+        /// <see cref="AuthorizationOptions"/> overload above, or through its own <c>AddAuthorization</c>
+        /// call, whether registered before or after this one — always takes precedence.
+        /// </summary>
+        internal static IServiceCollection AddDefaultGraphCmsUiAuthorizationPolicy(this IServiceCollection services)
+        {
+            services.AddAuthorization();
+            services.PostConfigure<AuthorizationOptions>(options =>
             {
-                services.AddAuthorizationBuilder().AddPolicy(GraphCmsUiAuthorizationPolicy.Default, policy =>
+                if (options.GetPolicy(GraphCmsUiAuthorizationPolicy.Default) != null)
+                {
+                    return;
+                }
+
+                options.AddPolicy(GraphCmsUiAuthorizationPolicy.Default, policy =>
                 {
                     policy.RequireRole("CmsAdmins", "Administrators", "WebAdmins");
                 });
-            }
+            });
 
             return services;
         }

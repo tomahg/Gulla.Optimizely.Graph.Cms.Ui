@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -6,10 +6,10 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>1.0.30</Version>
-    <PackageVersion>1.0.30</PackageVersion>
-    <AssemblyVersion>1.0.30</AssemblyVersion>
-    <FileVersion>1.0.30</FileVersion>
+    <Version>1.0.45</Version>
+    <PackageVersion>1.0.45</PackageVersion>
+    <AssemblyVersion>1.0.45</AssemblyVersion>
+    <FileVersion>1.0.45</FileVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <PackageId>Gulla.Optimizely.Graph.Cms.Ui</PackageId>
@@ -22,7 +22,7 @@
     <RepositoryUrl>https://github.com/tomahg/Gulla.Optimizely.Graph.Cms.Ui/</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
+    <PackageReleaseNotes>Phrases sharing a target, language and priority are shown and edited as one best bet.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,8 +39,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="EPiServer.CMS.Core" Version="[13.0.1, 14.0.0)" />
-    <PackageReference Include="EPiServer.CMS.UI.Core" Version="[13.0.1, 14.0.0)" />
+    <PackageReference Include="EPiServer.CMS.Core" Version="[13.1.1, 14.0.0)" />
+    <PackageReference Include="EPiServer.CMS.UI.Core" Version="[13.1.1, 14.0.0)" />
   </ItemGroup>
 
 </Project>

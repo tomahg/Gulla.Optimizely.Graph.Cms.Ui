@@ -10,6 +10,8 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
 
         Task<PinnedResult> CreateAsync(string siteKey, PinnedResult item);
 
+        Task<PinnedResult> UpdateAsync(string siteKey, string itemId, PinnedResult item);
+
         Task DeleteAsync(string siteKey, string itemId);
     }
 }

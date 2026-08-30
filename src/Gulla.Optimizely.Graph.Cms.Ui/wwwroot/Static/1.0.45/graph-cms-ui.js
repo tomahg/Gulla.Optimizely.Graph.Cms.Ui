@@ -1,0 +1,628 @@
+(function () {
+    'use strict';
+
+    var state = {
+        site: null,
+        lang: null,
+        slot: 'one',
+        pinned: null,
+        pinnedNames: {},
+        synonyms: null,
+        targetResolve: null,
+        editingKey: null
+    };
+
+    function $(id) { return document.getElementById(id); }
+
+    function api(path) { return '/GraphCmsUi/api' + path; }
+
+    function qs(extra) {
+        var params = new URLSearchParams();
+        if (state.site) params.set('site', state.site);
+        if (state.lang) params.set('lang', state.lang);
+        if (extra) for (var k in extra) params.set(k, extra[k]);
+        return params.toString();
+    }
+
+    function synQs() {
+        var params = new URLSearchParams();
+        if (state.site) params.set('site', state.site);
+        if (state.lang) params.set('lang', state.lang);
+        if (state.slot) params.set('slot', state.slot);
+        return params.toString();
+    }
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // ------- Tabs -------
+
+    function activateTab(name) {
+        var tabs = document.querySelectorAll('.gulla-tab');
+        tabs.forEach(function (t) {
+            var active = t.dataset.tab === name;
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        document.querySelectorAll('.gulla-tab-panel').forEach(function (p) { p.hidden = true; });
+        var panel = $('gulla-tab-' + name);
+        if (panel) panel.hidden = false;
+
+        // Refresh the tab's data every time it's activated. Cheap for our list sizes,
+        // and guarantees the list matches what's currently in Graph.
+        if (!state.site || !state.lang) return;
+        if (name === 'best-bets') loadPinned();
+        else if (name === 'synonyms') loadSynonyms();
+    }
+
+    // ------- Pinned Results -------
+
+    // Graph stores one phrase per pinned item, so a best bet covering several phrases is several
+    // items. Items that agree on everything but the phrase — same target, language, priority and
+    // active state — are the same best bet as far as the editor is concerned, so they are grouped
+    // back into one row. Differ in any of those and they are genuinely separate best bets.
+    function groupKeyOf(item) {
+        return [
+            item.targetKey || '',
+            item.language || '',
+            item.priority,
+            item.isActive === false ? 'off' : 'on'
+        ].join('|');
+    }
+
+    function pinnedGroups() {
+        var byKey = {};
+        var ordered = [];
+
+        (state.pinned || []).forEach(function (item) {
+            var key = groupKeyOf(item);
+            if (!byKey[key]) {
+                byKey[key] = { key: key, sample: item, items: [] };
+                ordered.push(byKey[key]);
+            }
+            byKey[key].items.push(item);
+        });
+
+        return ordered;
+    }
+
+    function groupByKey(key) {
+        return pinnedGroups().filter(function (g) { return g.key === key; })[0];
+    }
+
+    function groupPhrases(group) {
+        return group.items.map(function (i) { return (i.phrases || '').trim(); }).filter(Boolean);
+    }
+
+    function splitPhrases(value) {
+        var seen = {};
+        return (value || '').split(',').map(function (p) { return p.trim(); }).filter(function (p) {
+            if (!p) return false;
+            var k = p.toLowerCase();
+            if (seen[k]) return false;
+            seen[k] = true;
+            return true;
+        });
+    }
+
+    function renderPinned() {
+        var container = $('gulla-pinned-list');
+        if (!container) return;
+
+        if (state.pinned === null) {
+            container.innerHTML = '<div class="gulla-list__empty">Loading&hellip;</div>';
+            return;
+        }
+
+        var filter = ($('gulla-pinned-filter').value || '').toLowerCase();
+        var groups = pinnedGroups().filter(function (g) {
+            return !filter || groupPhrases(g).some(function (p) { return p.toLowerCase().indexOf(filter) >= 0; });
+        });
+
+        if (!groups.length) {
+            container.innerHTML = '<div class="gulla-list__empty">There are no pinned results yet</div>';
+            return;
+        }
+
+        container.innerHTML = groups.map(function (group) {
+            var item = group.sample;
+            var chips = groupPhrases(group).map(function (p) {
+                return '<span class="gulla-chip">' + escapeHtml(p) + '</span>';
+            }).join('');
+            var resolved = state.pinnedNames[item.targetKey];
+            var title = resolved ? resolved.name : item.targetKey;
+            // The resolved URL is site-relative, so it works as-is from the admin page.
+            // Opened in a new tab to keep the editor's place in the CMS shell.
+            var urlLine = resolved && resolved.url
+                ? '<div class="gulla-list__row-url"><a href="' + escapeHtml(resolved.url) + '" target="_blank" rel="noopener">' + escapeHtml(resolved.url) + '</a></div>'
+                : '';
+            var editing = group.key === state.editingKey;
+            var disabled = item.isActive === false;
+            var key = escapeHtml(group.key);
+            return '<div class="gulla-list__row' + (editing ? ' gulla-list__row--editing' : '') + (disabled ? ' gulla-list__row--disabled' : '') + '">' +
+                '<div class="gulla-list__row-actions">' +
+                '<button class="gulla-button" data-toggle-pinned="' + key + '">' + (disabled ? 'Enable' : 'Disable') + '</button>' +
+                '<button class="gulla-button" data-edit-pinned="' + key + '">Edit</button>' +
+                '<button class="gulla-button" data-delete-pinned="' + key + '">Delete</button>' +
+                '</div>' +
+                '<div class="gulla-list__row-title">' + escapeHtml(title) +
+                (disabled ? ' <span class="gulla-badge">Disabled</span>' : '') + '</div>' +
+                urlLine +
+                '<div class="gulla-list__row-body">Language: ' + escapeHtml(item.language || '') + ' &middot; Priority: ' + escapeHtml(item.priority) + '</div>' +
+                '<div class="gulla-list__chips">' + chips + '</div>' +
+                '</div>';
+        }).join('');
+    }
+
+    function loadPinned() {
+        return fetch(api('/pinned?' + qs()))
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (items) {
+                state.pinned = items || [];
+                renderPinned();
+                return resolvePinnedNames();
+            });
+    }
+
+    function resolvePinnedNames() {
+        var guids = state.pinned.map(function (p) { return p.targetKey; }).filter(Boolean);
+        var unique = guids.filter(function (g, i) { return guids.indexOf(g) === i; });
+        var missing = unique.filter(function (g) { return !state.pinnedNames[g]; });
+        if (!missing.length) { renderPinned(); return; }
+
+        Promise.all(missing.map(function (g) {
+            return fetch(api('/pinned/resolve-content') + '?guid=' + encodeURIComponent(g))
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .catch(function () { return null; });
+        })).then(function (results) {
+            results.forEach(function (r) {
+                if (r && r.contentGuid) state.pinnedNames[r.contentGuid] = r;
+            });
+            renderPinned();
+        });
+    }
+
+    function bindPinned() {
+        var form = $('gulla-pinned-form');
+        if (!form) return;
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            // Picking content kicks off a server round-trip to turn the content link into a
+            // GUID. Wait for it, so submitting straight after a pick isn't mistaken for
+            // "nothing selected".
+            (state.targetResolve || Promise.resolve()).then(function () { savePinned(); });
+        });
+
+        $('gulla-pinned-cancel').addEventListener('click', function () { clearPinnedForm(); });
+
+        $('gulla-pinned-list').addEventListener('click', function (e) {
+            var edit = e.target.closest('[data-edit-pinned]');
+            if (edit) {
+                beginEditPinned(edit.getAttribute('data-edit-pinned'));
+                return;
+            }
+
+            var toggle = e.target.closest('[data-toggle-pinned]');
+            if (toggle) {
+                togglePinned(toggle.getAttribute('data-toggle-pinned'));
+                return;
+            }
+
+            var del = e.target.closest('[data-delete-pinned]');
+            if (del) {
+                deletePinnedGroup(del.getAttribute('data-delete-pinned'));
+            }
+        });
+
+        $('gulla-pinned-filter').addEventListener('input', renderPinned);
+
+        bindContentPicker();
+    }
+
+    // ------- Add / edit form -------
+
+    function beginEditPinned(key) {
+        var group = groupByKey(key);
+        if (!group) return;
+
+        state.editingKey = key;
+        $('gulla-pinned-phrases').value = groupPhrases(group).join(', ');
+        $('gulla-pinned-priority').value = group.sample.priority || 1;
+
+        // The picker can't be pre-selected — <optimizely-content-tree> always mounts empty and
+        // exposes no way to seed it — so the current target is shown as text instead. Leaving
+        // it alone keeps that target; picking something new overwrites it.
+        resetContentPicker();
+        $('gulla-pinned-target').value = group.sample.targetKey || '';
+        showCurrentTarget(group.sample.targetKey);
+
+        setFormMode('edit');
+        $('gulla-pinned-form').scrollIntoView({ block: 'nearest' });
+        renderPinned();
+    }
+
+    function clearPinnedForm() {
+        state.editingKey = null;
+        $('gulla-pinned-form').reset();
+        resetContentPicker();
+        setFormMode('add');
+        renderPinned();
+    }
+
+    function setFormMode(mode) {
+        $('gulla-pinned-submit').textContent = mode === 'edit' ? 'Save' : 'Add best bet';
+    }
+
+    function showCurrentTarget(targetKey) {
+        var line = $('gulla-pinned-target-current');
+        if (!line) return;
+        if (!targetKey) {
+            line.hidden = true;
+            line.textContent = '';
+            return;
+        }
+        var resolved = state.pinnedNames[targetKey];
+        line.textContent = 'Currently: ' + (resolved ? resolved.name : targetKey) +
+            ' — pick again only if you want to change it';
+        line.hidden = false;
+    }
+
+    // ------- Writing to Graph -------
+
+    // Graph has no partial update, so every write sends the whole item. Each call resolves to
+    // true/false rather than rejecting, so a sequence of writes can stop at the first failure.
+    function sendPinned(method, url, body, failureMessage) {
+        return fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function (r) {
+            if (r.ok) return true;
+            // Graph's own message is the useful part here — a duplicate phrase/target/
+            // language combination comes back as a 409 explaining exactly that.
+            return r.text().then(function (text) {
+                alert(failureMessage + (text ? '\n\n' + text : ''));
+                return false;
+            });
+        });
+    }
+
+    function deletePinnedItem(id) {
+        return fetch(api('/pinned/' + encodeURIComponent(id) + '?' + qs()), { method: 'DELETE' })
+            .then(function (r) {
+                if (r.ok) return true;
+                alert('Failed to delete a pinned result.');
+                return false;
+            });
+    }
+
+    function runSequential(steps) {
+        return steps.reduce(function (chain, step) {
+            return chain.then(function (ok) { return ok ? step() : false; });
+        }, Promise.resolve(true));
+    }
+
+    function savePinned() {
+        var phrases = splitPhrases($('gulla-pinned-phrases').value);
+        var targetKey = $('gulla-pinned-target').value.trim();
+
+        if (!phrases.length) {
+            alert('Please enter at least one phrase.');
+            return;
+        }
+        if (!targetKey) {
+            alert('Please pick a target content item.');
+            return;
+        }
+
+        var group = state.editingKey ? groupByKey(state.editingKey) : null;
+        var shared = {
+            targetKey: targetKey,
+            language: state.lang,
+            priority: parseInt($('gulla-pinned-priority').value, 10) || 1,
+            // The form has no field for this, so carry the existing value through — editing a
+            // disabled best bet must not quietly switch it back on.
+            isActive: group ? group.sample.isActive !== false : true
+        };
+        function bodyFor(phrase) {
+            return Object.assign({ phrases: phrase }, shared);
+        }
+
+        if (!group) {
+            // The API splits a comma-separated list into one item per phrase for us.
+            sendPinned('POST', api('/pinned?' + qs()), bodyFor(phrases.join(',')), 'Failed to add pinned result.')
+                .then(finishSave);
+            return;
+        }
+
+        runSequential(reconcileGroup(group, phrases, bodyFor)).then(finishSave);
+    }
+
+    // A phrase list is several writes, so a failure can leave some of them applied. Reload
+    // either way and only clear the form when everything went through.
+    function finishSave(ok) {
+        if (ok) clearPinnedForm();
+        loadPinned();
+    }
+
+    // Turns the group's existing items into the requested phrase list with the fewest writes:
+    // a phrase that is still there updates its item in place, a leftover item is re-used for a
+    // phrase that has no item yet (so an edited phrase keeps its id), and only then does
+    // anything get deleted or created. Updates run before deletes and creates so that shrinking
+    // a group never leaves a duplicate behind mid-way.
+    function reconcileGroup(group, phrases, bodyFor) {
+        var spare = group.items.slice();
+        var updates = [];
+        var pending = [];
+
+        phrases.forEach(function (phrase) {
+            var i = spare.findIndex(function (item) {
+                return (item.phrases || '').trim().toLowerCase() === phrase.toLowerCase();
+            });
+            if (i >= 0) {
+                updates.push(updateStep(spare.splice(i, 1)[0].id, phrase, bodyFor));
+            } else {
+                pending.push(phrase);
+            }
+        });
+
+        while (pending.length && spare.length) {
+            updates.push(updateStep(spare.shift().id, pending.shift(), bodyFor));
+        }
+
+        var deletes = spare.map(function (item) {
+            return function () { return deletePinnedItem(item.id); };
+        });
+        var creates = pending.map(function (phrase) {
+            return function () {
+                return sendPinned('POST', api('/pinned?' + qs()), bodyFor(phrase), 'Failed to add a phrase to the best bet.');
+            };
+        });
+
+        return updates.concat(deletes, creates);
+    }
+
+    function updateStep(id, phrase, bodyFor) {
+        return function () {
+            return sendPinned('PUT', api('/pinned/' + encodeURIComponent(id) + '?' + qs()), bodyFor(phrase),
+                'Failed to save the best bet.');
+        };
+    }
+
+    function togglePinned(key) {
+        var group = groupByKey(key);
+        if (!group) return;
+
+        var enabling = group.sample.isActive === false;
+        var steps = group.items.map(function (item) {
+            return function () {
+                return sendPinned('PUT', api('/pinned/' + encodeURIComponent(item.id) + '?' + qs()), {
+                    phrases: item.phrases,
+                    targetKey: item.targetKey,
+                    language: item.language,
+                    priority: item.priority,
+                    isActive: enabling
+                }, enabling ? 'Failed to enable the best bet.' : 'Failed to disable the best bet.');
+            };
+        });
+
+        runSequential(steps).then(function () { loadPinned(); });
+    }
+
+    function deletePinnedGroup(key) {
+        var group = groupByKey(key);
+        if (!group) return;
+
+        var count = group.items.length;
+        var what = count > 1 ? 'this pinned result and all ' + count + ' of its phrases' : 'this pinned result';
+        if (!confirm('Delete ' + what + '?')) return;
+
+        var steps = group.items.map(function (item) {
+            return function () { return deletePinnedItem(item.id); };
+        });
+
+        runSequential(steps).then(function () {
+            if (state.editingKey === key) clearPinnedForm();
+            loadPinned();
+        });
+    }
+
+    // ------- Content picker (<optimizely-content-tree> web component) -------
+
+    // The component is registered by Optimizely's optimizely-web-components.js (pulled in by
+    // @Html.RegisterOptimizelyWebComponents() in the view). It renders its own selected-item
+    // label and "Select content..." button, and reports a pick by dispatching an
+    // `onNodeSelected` CustomEvent *on the element itself* — that is the only way to read the
+    // selection, the component exposes no value property. The event detail is a content tree
+    // node, `{ name, contentLink, ... }`, so we resolve the content link server-side to the
+    // GUID Graph stores as the pinned result's target.
+    var CONTENT_TREE_ID = 'content-tree';
+
+    function bindContentPicker() {
+        var tree = $(CONTENT_TREE_ID);
+        if (!tree) return;
+        tree.addEventListener('onNodeSelected', function (e) {
+            var node = e.detail;
+            if (!node || !node.contentLink) {
+                clearPickerSelection();
+                return;
+            }
+            applyPickedContent(node.contentLink);
+        });
+    }
+
+    function applyPickedContent(contentRef) {
+        state.targetResolve = fetch(api('/pinned/resolve-content') + '?contentLink=' + encodeURIComponent(contentRef), { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (resolved) {
+                if (!resolved || !resolved.contentGuid) {
+                    alert('Could not resolve the selected content to a GUID.');
+                    clearPickerSelection();
+                    return;
+                }
+                $('gulla-pinned-target').value = resolved.contentGuid;
+                // A fresh pick replaces whatever the best bet pointed at before.
+                showCurrentTarget(null);
+            })
+            .catch(function () { clearPickerSelection(); });
+        return state.targetResolve;
+    }
+
+    function clearPickerSelection() {
+        $('gulla-pinned-target').value = '';
+        state.targetResolve = null;
+        showCurrentTarget(null);
+    }
+
+    // The component holds its selection in React state, so form.reset() leaves the previous
+    // pick on screen with an empty hidden field behind it. Swapping in a fresh element
+    // re-mounts it with no selection.
+    function resetContentPicker() {
+        var tree = $(CONTENT_TREE_ID);
+        clearPickerSelection();
+        if (!tree) return;
+        var fresh = document.createElement('optimizely-content-tree');
+        fresh.id = CONTENT_TREE_ID;
+        tree.replaceWith(fresh);
+        bindContentPicker();
+    }
+
+    // ------- Synonyms -------
+
+    function directionIcon(bidi) {
+        return '<span class="gulla-direction-icon">' + (bidi ? '&lt;&gt;' : '&gt;') + '</span>';
+    }
+
+    function renderSynonyms() {
+        var tbody = document.querySelector('#gulla-syn-list tbody');
+        if (!tbody) return;
+
+        if (state.synonyms === null) {
+            tbody.innerHTML = '<tr class="gulla-table__empty"><td colspan="4">Loading&hellip;</td></tr>';
+            return;
+        }
+
+        var filter = ($('gulla-syn-filter').value || '').toLowerCase();
+        var rows = state.synonyms.filter(function (s) {
+            if (!filter) return true;
+            var blob = (s.phrases || []).join(',') + ' ' + (s.synonym || '');
+            return blob.toLowerCase().indexOf(filter) >= 0;
+        });
+
+        if (!rows.length) {
+            tbody.innerHTML = '<tr class="gulla-table__empty"><td colspan="4">No synonyms yet</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rows.map(function (s) {
+            return '<tr>' +
+                '<td>' + escapeHtml((s.phrases || []).join(', ')) + '</td>' +
+                '<td class="gulla-table__direction">' + directionIcon(s.bidirectional) + '</td>' +
+                '<td>' + escapeHtml(s.synonym || '') + '</td>' +
+                '<td><button class="gulla-button" data-delete-syn="' + escapeHtml(s.rowKey) + '">Delete</button></td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function loadSynonyms() {
+        return fetch(api('/synonyms?' + synQs()))
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (items) { state.synonyms = items || []; renderSynonyms(); });
+    }
+
+    function bindSynonyms() {
+        var form = $('gulla-syn-form');
+        if (!form) return;
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var body = {
+                phrases: $('gulla-syn-phrases').value.trim(),
+                synonym: $('gulla-syn-synonym').value.trim(),
+                bidirectional: $('gulla-syn-bidi').checked
+            };
+            if (!body.phrases || !body.synonym) return;
+
+            fetch(api('/synonyms?' + synQs()), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).then(function (r) {
+                if (!r.ok) return alert('Failed to add synonym.');
+                form.reset();
+                loadSynonyms();
+            });
+        });
+
+        document.querySelector('#gulla-syn-list').addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-delete-syn]');
+            if (!btn) return;
+            var key = btn.getAttribute('data-delete-syn');
+            if (!confirm('Delete this synonym?')) return;
+            fetch(api('/synonyms/' + encodeURIComponent(key) + '?' + synQs()), { method: 'DELETE' })
+                .then(function () { loadSynonyms(); });
+        });
+
+        $('gulla-syn-filter').addEventListener('input', renderSynonyms);
+
+        $('gulla-syn-import-file').addEventListener('change', function (e) {
+            var file = e.target.files && e.target.files[0];
+            if (!file) return;
+            var fd = new FormData();
+            fd.append('file', file);
+            fetch(api('/synonyms/import?' + synQs()), { method: 'POST', body: fd })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+                .then(function (res) {
+                    alert('Imported ' + res.imported + ' synonyms.');
+                    loadSynonyms();
+                })
+                .catch(function () { alert('Import failed.'); });
+            e.target.value = '';
+        });
+
+        $('gulla-syn-export').addEventListener('click', function (e) {
+            e.preventDefault();
+            window.location.href = api('/synonyms/export?' + synQs());
+        });
+    }
+
+    // ------- Boot -------
+
+    function refreshAll() {
+        loadPinned();
+        loadSynonyms();
+    }
+
+    function init() {
+        var siteSelect = $('gulla-site-select');
+        var langSelect = $('gulla-lang-select');
+        var slotSelect = $('gulla-syn-slot');
+        state.site = siteSelect ? siteSelect.value : null;
+        state.lang = langSelect ? langSelect.value : null;
+        state.slot = (slotSelect && slotSelect.value) || 'one';
+
+        if (siteSelect) siteSelect.addEventListener('change', function () { state.site = siteSelect.value; refreshAll(); });
+        if (langSelect) langSelect.addEventListener('change', function () { state.lang = langSelect.value; refreshAll(); });
+        if (slotSelect) slotSelect.addEventListener('change', function () { state.slot = slotSelect.value; loadSynonyms(); });
+
+        document.querySelectorAll('.gulla-tab').forEach(function (tab) {
+            tab.addEventListener('click', function () { activateTab(tab.dataset.tab); });
+        });
+        activateTab((window.gullaGraphUi && window.gullaGraphUi.initialTab) || 'best-bets');
+
+        bindPinned();
+        bindSynonyms();
+        if (state.site && state.lang) {
+            refreshAll();
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();

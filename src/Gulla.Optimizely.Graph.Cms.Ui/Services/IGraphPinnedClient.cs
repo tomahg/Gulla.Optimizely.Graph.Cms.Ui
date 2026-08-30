@@ -6,12 +6,23 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
 {
     public interface IGraphPinnedClient
     {
-        Task<IReadOnlyList<PinnedResult>> ListAsync(string siteKey, string language);
+        Task<IReadOnlyList<PinnedCollection>> ListCollectionsAsync();
 
-        Task<PinnedResult> CreateAsync(string siteKey, PinnedResult item);
+        /// <summary>Returns the collection with this key, creating it if it doesn't exist yet.</summary>
+        Task<PinnedCollection> EnsureCollectionAsync(string key, string title);
 
-        Task<PinnedResult> UpdateAsync(string siteKey, string itemId, PinnedResult item);
+        /// <summary>Creates a collection. Fails if the key is already taken.</summary>
+        Task<PinnedCollection> CreateCollectionAsync(string key, string title);
 
-        Task DeleteAsync(string siteKey, string itemId);
+        /// <summary>Deletes a collection and every pinned result in it.</summary>
+        Task DeleteCollectionAsync(string collectionId);
+
+        Task<IReadOnlyList<PinnedResult>> ListAsync(string collectionId, string language);
+
+        Task<PinnedResult> CreateAsync(string collectionId, PinnedResult item);
+
+        Task<PinnedResult> UpdateAsync(string collectionId, string itemId, PinnedResult item);
+
+        Task DeleteAsync(string collectionId, string itemId);
     }
 }

@@ -6,6 +6,8 @@
         lang: null,
         slot: 'one',
         tab: null,
+        collections: null,
+        collectionId: null,
         pinned: null,
         pinnedNames: {},
         synonyms: null,
@@ -17,12 +19,27 @@
 
     function api(path) { return '/GraphCmsUi/api' + path; }
 
+    // Pinned items live in a collection, addressed by Graph's collection id. The site is not
+    // part of this — the collection already encodes which site it belongs to.
     function qs(extra) {
         var params = new URLSearchParams();
-        if (state.site) params.set('site', state.site);
+        if (state.collectionId) params.set('collection', state.collectionId);
         if (state.lang) params.set('lang', state.lang);
         if (extra) for (var k in extra) params.set(k, extra[k]);
         return params.toString();
+    }
+
+    // Collection management is per site, so those calls carry the site instead.
+    function siteQs(extra) {
+        var params = new URLSearchParams();
+        if (state.site) params.set('site', state.site);
+        if (extra) for (var k in extra) params.set(k, extra[k]);
+        return params.toString();
+    }
+
+    function selectedCollection() {
+        var id = state.collectionId;
+        return (state.collections || []).filter(function (c) { return c.id === id; })[0] || null;
     }
 
     // Synonyms are scoped by language and slot only — Graph has no per-site synonym list, so
@@ -62,10 +79,13 @@
         var panel = $('gulla-tab-' + name);
         if (panel) panel.hidden = false;
 
-        // Synonyms are per language and slot only, never per site, so showing the site picker
-        // on that tab would promise a scope that doesn't exist.
+        // Synonyms are per language and slot only, never per site, and they don't live in
+        // collections — showing either picker there would promise a scope that doesn't exist.
+        var synonyms = name === 'synonyms';
         var sitePicker = $('gulla-site-picker');
-        if (sitePicker) sitePicker.hidden = name === 'synonyms';
+        if (sitePicker) sitePicker.hidden = synonyms;
+        var collectionPicker = $('gulla-collection-picker');
+        if (collectionPicker) collectionPicker.hidden = synonyms;
 
         loadActiveTab();
     }
@@ -76,7 +96,195 @@
     function loadActiveTab() {
         if (!state.lang) return;
         if (state.tab === 'synonyms') return loadSynonyms();
-        if (state.site) return loadPinned();
+        if (!state.site) return;
+        // The collection list has to exist before anything can be listed out of one.
+        return state.collections === null ? loadCollections() : loadPinned();
+    }
+
+    // ------- Collections -------
+
+    // A pinned result belongs to a collection, and a collection belongs to a site (the site is
+    // the suffix of its key). The default collection is created server-side on first list, so
+    // this never comes back empty.
+    function loadCollections() {
+        state.collections = null;
+        renderCollectionInfo();
+
+        return fetch(api('/pinned/collections?' + siteQs()))
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (items) {
+                state.collections = items || [];
+
+                // Keep the current selection across a refresh when it still exists; otherwise
+                // fall back to the default, which the server sorts first.
+                var stillThere = state.collections.some(function (c) { return c.id === state.collectionId; });
+                if (!stillThere) {
+                    var def = state.collections.filter(function (c) { return c.isDefault; })[0];
+                    state.collectionId = (def || state.collections[0] || {}).id || null;
+                }
+
+                renderCollectionSelect();
+                renderCollectionInfo();
+                state.pinned = null;
+                return loadPinned();
+            });
+    }
+
+    function renderCollectionSelect() {
+        var select = $('gulla-collection-select');
+        if (!select) return;
+
+        select.innerHTML = (state.collections || []).map(function (c) {
+            return '<option value="' + escapeHtml(c.id) + '"' +
+                (c.id === state.collectionId ? ' selected' : '') + '>' +
+                escapeHtml(c.name) + '</option>';
+        }).join('');
+
+        // The default collection is recreated on the next load, so deleting it would only
+        // empty it. The server refuses too; this just keeps the button honest.
+        var current = selectedCollection();
+        var del = $('gulla-collection-delete');
+        if (del) {
+            del.disabled = !current || current.isDefault;
+            del.title = del.disabled
+                ? 'The default collection cannot be deleted'
+                : 'Delete this collection and all its pinned results';
+        }
+    }
+
+    // The key — not the id — is what Graph matches in a GraphQL `pinned: { collections: [...] }`
+    // argument. Passing the id there returns zero results, silently, so the key is what gets
+    // shown first and given the copy button.
+    function renderCollectionInfo() {
+        var box = $('gulla-collection-info');
+        if (!box) return;
+
+        var c = selectedCollection();
+        if (!c) {
+            box.hidden = true;
+            box.innerHTML = '';
+            return;
+        }
+
+        box.hidden = false;
+        box.innerHTML =
+            '<div class="gulla-collection-info__row">' +
+                '<span class="gulla-collection-info__label">Collection key</span>' +
+                '<code class="gulla-collection-info__value">' + escapeHtml(c.key) + '</code>' +
+                '<button type="button" class="gulla-button gulla-button--small" data-copy="' + escapeHtml(c.key) + '">Copy</button>' +
+                '<span class="gulla-collection-info__hint">Use this in <code>pinned: { collections: [&hellip;] }</code></span>' +
+            '</div>' +
+            '<div class="gulla-collection-info__row">' +
+                '<span class="gulla-collection-info__label">Collection id</span>' +
+                '<code class="gulla-collection-info__value">' + escapeHtml(c.id) + '</code>' +
+                '<button type="button" class="gulla-button gulla-button--small" data-copy="' + escapeHtml(c.id) + '">Copy</button>' +
+                '<span class="gulla-collection-info__hint">For Graph’s REST API</span>' +
+            '</div>' +
+            '<pre class="gulla-collection-info__snippet">' + escapeHtml(
+                'pinned: { phrase: $searchText, collections: ["' + c.key + '"] }') + '</pre>';
+    }
+
+    function addCollection() {
+        var name = prompt('Name for the new collection (letters, digits and dashes):', '');
+        if (name === null) return;
+        name = name.trim();
+        if (!name) return;
+
+        fetch(api('/pinned/collections?' + siteQs()), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name })
+        }).then(function (r) {
+            if (!r.ok) {
+                return r.text().then(function (t) {
+                    alert('Failed to create the collection.' + (t ? '\n\n' + t : ''));
+                });
+            }
+            return r.json().then(function (created) {
+                state.collectionId = created.id;
+                return loadCollections();
+            });
+        });
+    }
+
+    function deleteCollection() {
+        var c = selectedCollection();
+        if (!c || c.isDefault) return;
+
+        var count = (state.pinned || []).length;
+        var warning = 'Delete the collection "' + c.name + '"?\n\n' +
+            'This permanently removes the collection and every pinned result in it' +
+            (count ? ' (' + count + ' in the current language, possibly more in others)' : '') +
+            '.\n\nAny GraphQL query still passing "' + c.key + '" will stop matching.';
+        if (!confirm(warning)) return;
+
+        fetch(api('/pinned/collections/' + encodeURIComponent(c.id) + '?' + siteQs()), { method: 'DELETE' })
+            .then(function (r) {
+                if (!r.ok) {
+                    return r.text().then(function (t) {
+                        alert('Failed to delete the collection.' + (t ? '\n\n' + t : ''));
+                    });
+                }
+                state.collectionId = null;
+                return loadCollections();
+            });
+    }
+
+    function bindCollections() {
+        var select = $('gulla-collection-select');
+        if (select) {
+            select.addEventListener('change', function () {
+                state.collectionId = select.value;
+                state.pinned = null;
+                state.editingKey = null;
+                renderCollectionSelect();
+                renderCollectionInfo();
+                loadPinned();
+            });
+        }
+
+        var add = $('gulla-collection-add');
+        if (add) add.addEventListener('click', addCollection);
+
+        var del = $('gulla-collection-delete');
+        if (del) del.addEventListener('click', deleteCollection);
+
+        var info = $('gulla-collection-info');
+        if (info) {
+            info.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-copy]');
+                if (!btn) return;
+                copyToClipboard(btn.getAttribute('data-copy'), btn);
+            });
+        }
+    }
+
+    // navigator.clipboard needs a secure context; the CMS is usually on https but a local
+    // dev site on plain http is common enough to be worth the fallback.
+    function copyToClipboard(text, btn) {
+        var done = function () {
+            var original = btn.textContent;
+            btn.textContent = 'Copied';
+            setTimeout(function () { btn.textContent = original; }, 1200);
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(done, function () { legacyCopy(text, done); });
+        } else {
+            legacyCopy(text, done);
+        }
+    }
+
+    function legacyCopy(text, done) {
+        var area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'absolute';
+        area.style.left = '-9999px';
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand('copy'); done(); } catch (e) { /* nothing useful to say */ }
+        document.body.removeChild(area);
     }
 
     // ------- Pinned Results -------
@@ -179,6 +387,12 @@
     }
 
     function loadPinned() {
+        if (!state.collectionId) {
+            state.pinned = [];
+            renderPinned();
+            return Promise.resolve();
+        }
+
         return fetch(api('/pinned?' + qs()))
             .then(function (r) { return r.ok ? r.json() : []; })
             .then(function (items) {
@@ -638,8 +852,16 @@
         state.slot = (slotSelect && slotSelect.value) || 'one';
 
         // Changing site or language invalidates the visible list; the other tab picks up the
-        // new selection when it is activated.
-        if (siteSelect) siteSelect.addEventListener('change', function () { state.site = siteSelect.value; state.pinned = null; loadActiveTab(); });
+        // new selection when it is activated. A different site means a different set of
+        // collections, so those have to be re-fetched rather than filtered.
+        if (siteSelect) siteSelect.addEventListener('change', function () {
+            state.site = siteSelect.value;
+            state.collections = null;
+            state.collectionId = null;
+            state.pinned = null;
+            state.editingKey = null;
+            loadActiveTab();
+        });
         if (langSelect) langSelect.addEventListener('change', function () { state.lang = langSelect.value; state.pinned = null; state.synonyms = null; loadActiveTab(); });
         if (slotSelect) slotSelect.addEventListener('change', function () { state.slot = slotSelect.value; state.synonyms = null; loadSynonyms(); });
 
@@ -647,6 +869,7 @@
             tab.addEventListener('click', function () { activateTab(tab.dataset.tab); });
         });
 
+        bindCollections();
         bindPinned();
         bindSynonyms();
 

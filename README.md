@@ -43,7 +43,7 @@ The package reuses Optimizely Graph's existing configuration. Make sure you alre
 
 After install, log in to the CMS as an administrator and go to **Settings → Graph Optimization** (in the left sidebar, under *Data & Sync Management*, alongside Scheduled Jobs and GraphiQL). You'll find two tabs:
 
-- **Pinned Results** — pin specific CMS content to the top of the search results for chosen phrases. Scoped per site and per language. Previously called Best Bets in Search & Navigation.
+- **Pinned Results** — pin specific CMS content to the top of the search results for chosen phrases. Organised into collections, scoped per site and per language. Previously called Best Bets in Search & Navigation.
 - **Synonyms** — define one-way (`a => b`) and bidirectional (`a <=> b`) term equivalences. Scoped per language and per slot. Import/export the CMS 12 CSV format directly.
 
 ### Scoping
@@ -55,34 +55,64 @@ The two features are scoped differently, because Graph scopes them differently:
 | Pinned Results | ✅ (query must opt in — see below) | ✅ | — |
 | Synonyms | ❌ | ✅ | ✅ |
 
-Pinned results are stored in a **per-site Graph collection**, keyed `default-<site>`. The collection is created on first use.
+Synonyms have **no per-site dimension in Graph** — a synonym list belongs to a language and a slot, and applies to every site sharing that Graph instance. The site picker and the collection picker are therefore both hidden on the Synonyms tab.
+
+Pinned results live in **Graph collections**. Every site gets a `default-<site>` collection, created on first use, and you can add more from the toolbar — one per editorial use case, e.g. `black-friday-<site>`. Collection keys are always `<name>-<site>`; the site suffix is what keeps one site's pins out of another's.
 
 > **Per-site scoping only takes effect if your query asks for it.** Graph evaluates **all active
 > collections** when a query omits the `collections` argument. On a multi-site solution sharing one
 > Graph instance, that means site A's pinned results fire on site B's searches. Pass the collection
 > explicitly to keep them apart.
 
-`collections` takes the collection's **id** (a GUID), not its key. To find the id for a site, call Graph's REST API and match on the key this addon generates:
-
-```
-GET {GatewayAddress}/api/pinned/collections
-Authorization: Basic base64(AppKey:Secret)
-```
+`collections` takes the collection **key**, not its id. Passing the GUID returns zero results — silently, exactly as if you had named a collection that doesn't exist. The UI shows the key of the selected collection with a copy button, next to the id (which you only need for Graph's REST API).
 
 ```graphql
-query Search($searchText: String, $collectionId: String) {
+query Search($searchText: String) {
   ArticlePage(
     where: { _fulltext: { match: $searchText } }
-    pinned: { phrase: $searchText, collections: $collectionId }
+    pinned: { phrase: $searchText, collections: ["default-mysite"] }
   ) {
     items { Name }
   }
 }
 ```
 
-If you run a **single site** on the Graph instance, you can omit `collections` entirely — there is only one active collection and the default behaviour is what you want.
+With the .NET client (`Optimizely.Graph.Cms.Query`):
 
-Synonyms have **no per-site dimension in Graph** — a synonym list belongs to a language and a slot, and applies to every site sharing that Graph instance. The site picker in the toolbar is therefore hidden on the Synonyms tab.
+```csharp
+using Optimizely.Graph.Cms.Query;
+using Optimizely.Graph.Cms.Query.Abstractions;
+
+public class SearchService(IGraphContentClient client)
+{
+    public async Task<IEnumerable<ArticlePage>> SearchAsync(string phrase) =>
+        await client
+            .QueryContent<ArticlePage>()
+            .SearchFor(phrase)
+            .WithPinned(phrase, "default-mysite")   // collection KEY, despite the parameter name
+            .SetLocale("en")
+            .GetAsContentAsync();
+}
+```
+
+> ⚠️ `WithPinned` has three overloads, and two of them are traps:
+> `WithPinned(string phrase, Guid? collectionId)` and `WithPinned(string phrase, IEnumerable<Guid>)`
+> take GUIDs, which Graph does not match on — they return zero pinned results, silently.
+> Use `WithPinned(string phrase, params string[])` and pass **keys**, or `WithPinned(phrase)`
+> alone to evaluate every active collection. The `params string[]` parameter is *named*
+> `collectionIds`, which does not help.
+
+If you run a **single site** with a single collection, you can omit the collection argument entirely — the default behaviour of evaluating every active collection is then what you want.
+
+### Managing collections
+
+The **Collection** picker in the toolbar applies to the Pinned Results tab only:
+
+- **Select** — switches which collection you're editing. Opens on `default`.
+- **New** — prompts for a name, slugified into `<name>-<site>`. Use one per campaign or use case.
+- **Delete** — removes the collection **and every pinned result in it**, in all languages. The `default` collection can't be deleted (it would just be recreated empty); delete its pinned results individually instead.
+
+Deleting a collection breaks any query still passing its key, so the confirmation names the key.
 
 ### Synonym slots
 
@@ -95,6 +125,39 @@ Graph exposes **two synonym slots per language**, named `ONE` and `TWO`. Which o
   }
 }
 ```
+
+The same thing with the .NET client (`Optimizely.Graph.Cms.Query`), which is how most CMS 13 sites query Graph:
+
+```csharp
+using Optimizely.Graph.Cms.Query;
+using Optimizely.Graph.Cms.Query.Abstractions;
+using Optimizely.Graph.Cms.Query.Filtering;
+using Optimizely.Graph.Cms.Query.Implementation.Request.Expressions; // SynonymSlot
+
+public class SearchService(IGraphContentClient client)
+{
+    // Full-text search, expanded with the synonyms in slot One.
+    public async Task<IEnumerable<ArticlePage>> SearchAsync(string phrase) =>
+        await client
+            .QueryContent<ArticlePage>()
+            .SearchFor(phrase, synonymSlots: [SynonymSlot.One])
+            .SetLocale("en")
+            .GetAsContentAsync();
+
+    // Or apply synonyms to one field instead of the whole document.
+    public async Task<IEnumerable<ArticlePage>> ByHeadingAsync(string phrase) =>
+        await client
+            .QueryContent<ArticlePage>()
+            .Where(x => x.Heading.Match(phrase, SynonymSlot.One))
+            .GetAsContentAsync();
+}
+```
+
+Three things that cost time if you don't know them:
+
+- `SynonymSlot` lives in `Optimizely.Graph.Cms.Query.Implementation.Request.Expressions` — an `Implementation` namespace, but it is the public enum you need. Values are `SynonymSlot.One` and `SynonymSlot.Two`.
+- `UsingFullText()` is obsolete; `SearchFor(query, highlightTag, boost, synonymSlots)` replaces it and is the only overload that accepts slots.
+- `GetAsContentAsync()` returns `IGetAsContentResult<T>`, which *is* an `IEnumerable<T>` — there's no `.Content` property to unwrap.
 
 Pick the matching slot in the UI before adding or importing synonyms. Changes can take a few minutes to take effect.
 
@@ -139,7 +202,7 @@ inside the policy.
 ## Limitations (inherited from Optimizely Graph)
 
 - Pinned results target **internal CMS content only**. Graph's `targetKey` is a content GUID, so there is no way to pin an external link.
-- Pinned results display the content's own title/description — the pinned item carries no display fields to override them with.
+- Pinned results display the content's own title/description. The pinned item carries no display fields to override them with.
 - When several pinned items share a phrase, Graph **shows only the top five**, ordered by priority. Storage isn't capped.
 - Graph matches a pinned item's `phrases` value as a single literal string. The comma-separated box in the UI is therefore split into one Graph item per phrase; a phrase cannot itself contain a comma.
 - Synonyms are **per-language**; there is no shared "all languages" slot.

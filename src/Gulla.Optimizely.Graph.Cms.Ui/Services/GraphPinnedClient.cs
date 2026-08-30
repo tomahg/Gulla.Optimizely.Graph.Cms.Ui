@@ -1,34 +1,73 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using Gulla.Optimizely.Graph.Cms.Ui.Configuration;
 using Gulla.Optimizely.Graph.Cms.Ui.Models;
-using Microsoft.Extensions.Options;
 
 namespace Gulla.Optimizely.Graph.Cms.Ui.Services
 {
     public class GraphPinnedClient : IGraphPinnedClient
     {
         private readonly HttpClient _httpClient;
-        private readonly GraphCmsUiOptions _options;
-        // Static because AddHttpClient registers this class as transient: an instance field
-        // would be discarded after every single call and re-fetch the collection list each time.
-        // Graph collection ids are stable, so process lifetime is the right scope for them.
-        private static readonly ConcurrentDictionary<string, string> CollectionIdByKey = new();
 
-        public GraphPinnedClient(HttpClient httpClient, IOptions<GraphCmsUiOptions> options)
+        public GraphPinnedClient(HttpClient httpClient)
         {
             _httpClient = httpClient;
-            _options = options.Value;
         }
 
-        public async Task<IReadOnlyList<PinnedResult>> ListAsync(string siteKey, string language)
+        // ---- Collections ----
+
+        public async Task<IReadOnlyList<PinnedCollection>> ListCollectionsAsync()
         {
-            var collectionId = await EnsureCollectionAsync(BuildCollectionKey(siteKey), $"Pinned results for {siteKey}");
+            var response = await _httpClient.GetAsync("api/pinned/collections");
+            await EnsureSuccessOrThrowWithBodyAsync(response);
+
+            return await response.Content.ReadFromJsonAsync<List<PinnedCollection>>() ?? new List<PinnedCollection>();
+        }
+
+        public async Task<PinnedCollection> EnsureCollectionAsync(string key, string title)
+        {
+            var existing = (await ListCollectionsAsync())
+                .FirstOrDefault(c => string.Equals(c.Key, key, StringComparison.OrdinalIgnoreCase));
+
+            return existing ?? await CreateCollectionAsync(key, title);
+        }
+
+        public async Task<PinnedCollection> CreateCollectionAsync(string key, string title)
+        {
+            var newCollection = new PinnedCollection
+            {
+                Title = title,
+                Key = key,
+                // Graph defaults a new collection to isActive=false, and an inactive collection
+                // pins nothing. Always send true or the editor's first pin silently does nothing.
+                IsActive = true
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("api/pinned/collections", newCollection);
+            await EnsureSuccessOrThrowWithBodyAsync(response);
+
+            return await response.Content.ReadFromJsonAsync<PinnedCollection>();
+        }
+
+        public async Task DeleteCollectionAsync(string collectionId)
+        {
+            // Clear the items first. Graph documents DELETE /collections/{id}/items as "clear all
+            // items", and doing it explicitly means the outcome doesn't depend on whether
+            // deleting a collection cascades — which the API reference doesn't state either way.
+            var clear = await _httpClient.DeleteAsync($"api/pinned/collections/{collectionId}/items");
+            await EnsureSuccessOrThrowWithBodyAsync(clear);
+
+            var response = await _httpClient.DeleteAsync($"api/pinned/collections/{collectionId}");
+            await EnsureSuccessOrThrowWithBodyAsync(response);
+        }
+
+        // ---- Items ----
+
+        public async Task<IReadOnlyList<PinnedResult>> ListAsync(string collectionId, string language)
+        {
             var response = await _httpClient.GetAsync($"api/pinned/collections/{collectionId}/items");
             await EnsureSuccessOrThrowWithBodyAsync(response);
 
@@ -43,31 +82,30 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
             return items;
         }
 
-        public async Task<PinnedResult> CreateAsync(string siteKey, PinnedResult item)
+        public async Task<PinnedResult> CreateAsync(string collectionId, PinnedResult item)
         {
             item.Language = LanguageNormalizer.ToIsoCode(item.Language);
             item.TargetKey = NormalizeTargetKey(item.TargetKey);
-            var collectionId = await EnsureCollectionAsync(BuildCollectionKey(siteKey), $"Pinned results for {siteKey}");
+
             var response = await _httpClient.PostAsJsonAsync($"api/pinned/collections/{collectionId}/items", item);
             await EnsureSuccessOrThrowWithBodyAsync(response);
 
             return await response.Content.ReadFromJsonAsync<PinnedResult>();
         }
 
-        public async Task<PinnedResult> UpdateAsync(string siteKey, string itemId, PinnedResult item)
+        public async Task<PinnedResult> UpdateAsync(string collectionId, string itemId, PinnedResult item)
         {
             item.Language = LanguageNormalizer.ToIsoCode(item.Language);
             item.TargetKey = NormalizeTargetKey(item.TargetKey);
-            var collectionId = await EnsureCollectionAsync(BuildCollectionKey(siteKey), $"Pinned results for {siteKey}");
+
             var response = await _httpClient.PutAsJsonAsync($"api/pinned/collections/{collectionId}/items/{itemId}", item);
             await EnsureSuccessOrThrowWithBodyAsync(response);
 
             return await response.Content.ReadFromJsonAsync<PinnedResult>();
         }
 
-        public async Task DeleteAsync(string siteKey, string itemId)
+        public async Task DeleteAsync(string collectionId, string itemId)
         {
-            var collectionId = await EnsureCollectionAsync(BuildCollectionKey(siteKey), $"Pinned results for {siteKey}");
             var response = await _httpClient.DeleteAsync($"api/pinned/collections/{collectionId}/items/{itemId}");
             await EnsureSuccessOrThrowWithBodyAsync(response);
         }
@@ -98,50 +136,6 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
                 $"Optimizely Graph returned {(int)response.StatusCode} {response.ReasonPhrase} for {response.RequestMessage?.RequestUri}. Body: {body}",
                 null,
                 response.StatusCode);
-        }
-
-        private async Task<string> EnsureCollectionAsync(string key, string title)
-        {
-            if (CollectionIdByKey.TryGetValue(key, out var cached))
-            {
-                return cached;
-            }
-
-            var existing = await FindCollectionAsync(key);
-            if (existing != null)
-            {
-                CollectionIdByKey[key] = existing.Id;
-                return existing.Id;
-            }
-
-            var newCollection = new PinnedCollection
-            {
-                Title = title,
-                Key = key,
-                IsActive = true
-            };
-
-            var response = await _httpClient.PostAsJsonAsync("api/pinned/collections", newCollection);
-            await EnsureSuccessOrThrowWithBodyAsync(response);
-
-            var created = await response.Content.ReadFromJsonAsync<PinnedCollection>();
-            CollectionIdByKey[key] = created.Id;
-            return created.Id;
-        }
-
-        private async Task<PinnedCollection> FindCollectionAsync(string key)
-        {
-            var response = await _httpClient.GetAsync("api/pinned/collections");
-            await EnsureSuccessOrThrowWithBodyAsync(response);
-
-            var collections = await response.Content.ReadFromJsonAsync<List<PinnedCollection>>() ?? new List<PinnedCollection>();
-            return collections.FirstOrDefault(c => string.Equals(c.Key, key, StringComparison.OrdinalIgnoreCase));
-        }
-
-        private string BuildCollectionKey(string siteKey)
-        {
-            var prefix = string.IsNullOrWhiteSpace(_options.CollectionKeyPrefix) ? "default" : _options.CollectionKeyPrefix;
-            return $"{prefix}-{siteKey}".ToLowerInvariant();
         }
     }
 }

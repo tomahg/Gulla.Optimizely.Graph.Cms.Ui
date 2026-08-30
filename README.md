@@ -1,6 +1,6 @@
 # Gulla.Optimizely.Graph.Cms.Ui for CMS 13
 
-A familiar Search & Navigation–style admin UI for **Optimizely CMS 13** that lets editors manage **Pinned Results** (formerly *Best Bets*) and **Synonyms** through Optimizely Graph — without leaving the CMS.
+A familiar Search & Navigation–style admin UI for **Optimizely CMS 13** that lets editors manage **Pinned Results** (formerly *Best Bets*) and **Synonyms** through Optimizely Graph, without leaving the CMS.
 
 When Optimizely retired Search & Navigation in favour of Optimizely Graph, the editor UI for Best Bets and Synonyms went with it. This package brings that UI back, talking to Graph's REST APIs under the hood.
 
@@ -44,7 +44,7 @@ The package reuses Optimizely Graph's existing configuration. Make sure you alre
 After install, log in to the CMS as an administrator and go to **Settings → Graph Optimization** (in the left sidebar, under *Data & Sync Management*, alongside Scheduled Jobs and GraphiQL). You'll find two tabs:
 
 - **Pinned Results** — pin specific CMS content to the top of the search results for chosen phrases. Scoped per site and per language. Previously called Best Bets in Search & Navigation.
-- **Synonyms** — define one-way (`a => b`) and bidirectional (`a, b`) term equivalences. Scoped per language and per slot. Import/export the CMS 12 CSV format directly.
+- **Synonyms** — define one-way (`a => b`) and bidirectional (`a <=> b`) term equivalences. Scoped per language and per slot. Import/export the CMS 12 CSV format directly.
 
 ### Scoping
 
@@ -147,4 +147,4 @@ inside the policy.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT

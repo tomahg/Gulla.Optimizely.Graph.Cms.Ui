@@ -3,6 +3,8 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 .gulla-graph-ui { font-size: 14px; line-height: 1.45; }
 
 .gulla-toolbar { display: flex; align-items: center; gap: .5rem; padding: .75rem 2rem; border-bottom: 1px solid #eee; background: #fafafa; justify-content: flex-end; }
+.gulla-toolbar__group { display: inline-flex; align-items: center; gap: .5rem; }
+.gulla-toolbar__group[hidden] { display: none; }
 .gulla-toolbar__label { color: #555; }
 .gulla-toolbar__select { background: #ddd; border: 0; border-radius: 3px; padding: .25rem .5rem; font-size: 14px; }
 
@@ -22,7 +24,6 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 .gulla-form__label { color: #444; text-align: right; }
 .gulla-form__field { display: flex; flex-direction: column; }
 .gulla-form__checkbox { width: 1rem; height: 1rem; margin: 0; justify-self: start; }
-.gulla-form__field--inline { flex-direction: row; gap: .5rem; }
 .gulla-form__input { width: 100%; padding: .4rem .5rem; border: 1px solid #ccc; border-radius: 2px; font-size: 14px; }
 .gulla-form__input--small { width: 6rem; }
 .gulla-form__hint { color: #888; font-size: 12px; align-self: flex-end; }
@@ -57,15 +58,13 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 
 .gulla-actions-row { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
 
-.gulla-picker__selected-url { color: #888; font-size: 12px; margin-top: .25rem; }
-.gulla-form__row--hint { margin-top: -.5rem; }
 
 .gulla-slot-row { display: flex; align-items: center; gap: .5rem; margin: 0 0 1.5rem; }
 .gulla-slot-row__label { color: #444; }
 .gulla-slot-row__hint { color: #888; font-size: 12px; }
 .gulla-slot-row__hint code { background: #eee; padding: 1px 4px; border-radius: 2px; font-size: 11px; }
 
-/* Best bet rows: linked target URL, and the disabled state set by the Enable/Disable button. */
+/* Pinned result rows: linked target URL, and the disabled state set by the Enable/Disable button. */
 .gulla-list__row-url { margin-bottom: .25rem; }
 .gulla-list__row-url a { color: #4a41c4; text-decoration: none; }
 .gulla-list__row-url a:hover { text-decoration: underline; }

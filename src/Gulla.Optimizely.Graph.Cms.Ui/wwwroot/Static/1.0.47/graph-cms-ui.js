@@ -5,6 +5,7 @@
         site: null,
         lang: null,
         slot: 'one',
+        tab: null,
         pinned: null,
         pinnedNames: {},
         synonyms: null,
@@ -24,12 +25,21 @@
         return params.toString();
     }
 
-    function synQs() {
+    // Synonyms are scoped by language and slot only — Graph has no per-site synonym list, so
+    // the site the editor has selected is deliberately not part of this.
+    function synQs(extra) {
         var params = new URLSearchParams();
-        if (state.site) params.set('site', state.site);
         if (state.lang) params.set('lang', state.lang);
         if (state.slot) params.set('slot', state.slot);
+        if (extra) for (var k in extra) params.set(k, extra[k]);
         return params.toString();
+    }
+
+    // Rendered by @Html.AntiForgeryToken() in the view. Only the multipart import needs it:
+    // that content type is the one a cross-origin page can post without a CORS preflight.
+    function antiForgeryToken() {
+        var input = document.querySelector('input[name="__RequestVerificationToken"]');
+        return input ? input.value : '';
     }
 
     function escapeHtml(s) {
@@ -41,6 +51,8 @@
     // ------- Tabs -------
 
     function activateTab(name) {
+        state.tab = name;
+
         var tabs = document.querySelectorAll('.gulla-tab');
         tabs.forEach(function (t) {
             var active = t.dataset.tab === name;
@@ -50,19 +62,29 @@
         var panel = $('gulla-tab-' + name);
         if (panel) panel.hidden = false;
 
-        // Refresh the tab's data every time it's activated. Cheap for our list sizes,
-        // and guarantees the list matches what's currently in Graph.
-        if (!state.site || !state.lang) return;
-        if (name === 'best-bets') loadPinned();
-        else if (name === 'synonyms') loadSynonyms();
+        // Synonyms are per language and slot only, never per site, so showing the site picker
+        // on that tab would promise a scope that doesn't exist.
+        var sitePicker = $('gulla-site-picker');
+        if (sitePicker) sitePicker.hidden = name === 'synonyms';
+
+        loadActiveTab();
+    }
+
+    // Refresh the visible tab's data. Cheap for our list sizes, and it guarantees the list
+    // matches what's currently in Graph. The hidden tab reloads when it's activated, so
+    // there's no reason to fetch it now.
+    function loadActiveTab() {
+        if (!state.lang) return;
+        if (state.tab === 'synonyms') return loadSynonyms();
+        if (state.site) return loadPinned();
     }
 
     // ------- Pinned Results -------
 
-    // Graph stores one phrase per pinned item, so a best bet covering several phrases is several
+    // Graph stores one phrase per pinned item, so a pinned result covering several phrases is several
     // items. Items that agree on everything but the phrase — same target, language, priority and
-    // active state — are the same best bet as far as the editor is concerned, so they are grouped
-    // back into one row. Differ in any of those and they are genuinely separate best bets.
+    // active state — are the same pinned result as far as the editor is concerned, so they are grouped
+    // back into one row. Differ in any of those and they are genuinely separate pinned results.
     function groupKeyOf(item) {
         return [
             item.targetKey || '',
@@ -253,7 +275,7 @@
     }
 
     function setFormMode(mode) {
-        $('gulla-pinned-submit').textContent = mode === 'edit' ? 'Save' : 'Add best bet';
+        $('gulla-pinned-submit').textContent = mode === 'edit' ? 'Save' : 'Add pinned result';
     }
 
     function showCurrentTarget(targetKey) {
@@ -324,7 +346,7 @@
             language: state.lang,
             priority: parseInt($('gulla-pinned-priority').value, 10) || 1,
             // The form has no field for this, so carry the existing value through — editing a
-            // disabled best bet must not quietly switch it back on.
+            // disabled pinned result must not quietly switch it back on.
             isActive: group ? group.sample.isActive !== false : true
         };
         function bodyFor(phrase) {
@@ -378,7 +400,7 @@
         });
         var creates = pending.map(function (phrase) {
             return function () {
-                return sendPinned('POST', api('/pinned?' + qs()), bodyFor(phrase), 'Failed to add a phrase to the best bet.');
+                return sendPinned('POST', api('/pinned?' + qs()), bodyFor(phrase), 'Failed to add a phrase to the pinned result.');
             };
         });
 
@@ -388,7 +410,7 @@
     function updateStep(id, phrase, bodyFor) {
         return function () {
             return sendPinned('PUT', api('/pinned/' + encodeURIComponent(id) + '?' + qs()), bodyFor(phrase),
-                'Failed to save the best bet.');
+                'Failed to save the pinned result.');
         };
     }
 
@@ -405,7 +427,7 @@
                     language: item.language,
                     priority: item.priority,
                     isActive: enabling
-                }, enabling ? 'Failed to enable the best bet.' : 'Failed to disable the best bet.');
+                }, enabling ? 'Failed to enable the pinned result.' : 'Failed to disable the pinned result.');
             };
         });
 
@@ -464,7 +486,7 @@
                     return;
                 }
                 $('gulla-pinned-target').value = resolved.contentGuid;
-                // A fresh pick replaces whatever the best bet pointed at before.
+                // A fresh pick replaces whatever the pinned result pointed at before.
                 showCurrentTarget(null);
             })
             .catch(function () { clearPickerSelection(); });
@@ -551,7 +573,13 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             }).then(function (r) {
-                if (!r.ok) return alert('Failed to add synonym.');
+                // The server forwards Graph's own status and message, and answers a duplicate
+                // with a 409 that says so — worth showing rather than swallowing.
+                if (!r.ok) {
+                    return r.text().then(function (t) {
+                        alert('Failed to add synonym.' + (t ? '\n\n' + t : ''));
+                    });
+                }
                 form.reset();
                 loadSynonyms();
             });
@@ -562,8 +590,13 @@
             if (!btn) return;
             var key = btn.getAttribute('data-delete-syn');
             if (!confirm('Delete this synonym?')) return;
-            fetch(api('/synonyms/' + encodeURIComponent(key) + '?' + synQs()), { method: 'DELETE' })
-                .then(function () { loadSynonyms(); });
+            // The row key travels as a query parameter: it is built from editor text, and a
+            // phrase containing a slash would encode to %2F and be rejected in a path segment.
+            fetch(api('/synonyms?' + synQs({ rowKey: key })), { method: 'DELETE' })
+                .then(function (r) {
+                    if (!r.ok) return r.text().then(function (t) { alert('Failed to delete the synonym.' + (t ? '\n\n' + t : '')); });
+                    loadSynonyms();
+                });
         });
 
         $('gulla-syn-filter').addEventListener('input', renderSynonyms);
@@ -573,10 +606,15 @@
             if (!file) return;
             var fd = new FormData();
             fd.append('file', file);
+            fd.append('__RequestVerificationToken', antiForgeryToken());
             fetch(api('/synonyms/import?' + synQs()), { method: 'POST', body: fd })
                 .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
                 .then(function (res) {
-                    alert('Imported ' + res.imported + ' synonyms.');
+                    // res.total is what was in the file; res.skipped were already present.
+                    alert(res.skipped
+                        ? 'Imported ' + res.imported + ' of ' + res.total + ' synonyms. ' +
+                          res.skipped + ' already existed and were skipped.'
+                        : 'Imported ' + res.imported + ' synonyms.');
                     loadSynonyms();
                 })
                 .catch(function () { alert('Import failed.'); });
@@ -591,11 +629,6 @@
 
     // ------- Boot -------
 
-    function refreshAll() {
-        loadPinned();
-        loadSynonyms();
-    }
-
     function init() {
         var siteSelect = $('gulla-site-select');
         var langSelect = $('gulla-lang-select');
@@ -604,20 +637,21 @@
         state.lang = langSelect ? langSelect.value : null;
         state.slot = (slotSelect && slotSelect.value) || 'one';
 
-        if (siteSelect) siteSelect.addEventListener('change', function () { state.site = siteSelect.value; refreshAll(); });
-        if (langSelect) langSelect.addEventListener('change', function () { state.lang = langSelect.value; refreshAll(); });
-        if (slotSelect) slotSelect.addEventListener('change', function () { state.slot = slotSelect.value; loadSynonyms(); });
+        // Changing site or language invalidates the visible list; the other tab picks up the
+        // new selection when it is activated.
+        if (siteSelect) siteSelect.addEventListener('change', function () { state.site = siteSelect.value; state.pinned = null; loadActiveTab(); });
+        if (langSelect) langSelect.addEventListener('change', function () { state.lang = langSelect.value; state.pinned = null; state.synonyms = null; loadActiveTab(); });
+        if (slotSelect) slotSelect.addEventListener('change', function () { state.slot = slotSelect.value; state.synonyms = null; loadSynonyms(); });
 
         document.querySelectorAll('.gulla-tab').forEach(function (tab) {
             tab.addEventListener('click', function () { activateTab(tab.dataset.tab); });
         });
-        activateTab((window.gullaGraphUi && window.gullaGraphUi.initialTab) || 'best-bets');
 
         bindPinned();
         bindSynonyms();
-        if (state.site && state.lang) {
-            refreshAll();
-        }
+
+        // Last, so the handlers above are in place: activateTab loads the tab it shows.
+        activateTab((window.gullaGraphUi && window.gullaGraphUi.initialTab) || 'pinned-results');
     }
 
     if (document.readyState === 'loading') {

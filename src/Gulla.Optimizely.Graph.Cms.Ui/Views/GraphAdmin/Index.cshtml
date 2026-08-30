@@ -5,21 +5,27 @@
 @model GraphAdminViewModel
 @{
     Layout = null;
-    var assets = "/_content/Gulla.Optimizely.Graph.Cms.Ui/Static/1.0.45";
 
-    // Bring in Optimizely's Dojo runtime + epi-cms widgets (the ContentSelectorDialog lives
-    // in epi-cms/widget/). Both bundles are required explicitly because our page is not an
-    // Optimizely module, so the module-level <moduleDependencies> chain (which normally
-    // pulls Shell in when CMS is active) doesn't fire. Shell's widgets.js MUST load before
-    // CMS's widgets.js — the order of Require() calls determines script emission order.
-    RequiredResources.Require("epi.shell.ui");          // Dojo bootstrap + epi/shell modules
-    RequiredResources.Require("epi-cms.widgets.base");  // epi-cms modules (incl. ContentSelectorDialog)
+    // The static assets live in a version-stamped folder so an upgrade never serves a cached
+    // copy of the previous release's JS. Hard-coded on purpose: the project sets
+    // <GenerateAssemblyInfo>false</GenerateAssemblyInfo>, so <AssemblyVersion> is never written
+    // into the assembly and reading it back here yields 0.0.0.
+    // BUMP TOGETHER on every release: <Version> in the .csproj, the folder name under
+    // wwwroot/Static/, module.config's version + clientResourceRelativePath, and this line.
+    var assets = "/_content/Gulla.Optimizely.Graph.Cms.Ui/Static/1.0.47";
+
+    // Optimizely's Dojo runtime and the epi-cms bundle. The content picker is the
+    // <optimizely-content-tree> web component and needs neither, but the shell chrome
+    // (<platform-navigation>) is rendered by scripts these bundles pull in. Shell's widgets.js
+    // MUST load before CMS's — the order of Require() calls determines script emission order.
+    RequiredResources.Require("epi.shell.ui");
+    RequiredResources.Require("epi-cms.widgets.base");
 }
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Optimization &mdash; Graph</title>
+    <title>Graph Optimization</title>
     <link rel="stylesheet" href="@assets/graph-cms-ui.css" />
     <required-client-resources area="@RenderingTags.Header" />
     @Html.Raw(Html.RegisterOptimizelyWebComponents())
@@ -35,13 +41,17 @@
     <platform-navigation />
     <platform-navigation-wrapper>
         <div class="gulla-toolbar">
-            <span class="gulla-toolbar__label">For</span>
-            <select id="gulla-site-select" class="gulla-toolbar__select">
-                @foreach (var site in Model.Sites)
-                {
-                    <option value="@site.Key" selected="@(site.Key == Model.SelectedSiteKey)">@site.Name</option>
-                }
-            </select>
+            @* Synonyms have no per-site dimension in Graph, so the site picker is hidden
+               while that tab is active rather than implying a scope that isn't there. *@
+            <span id="gulla-site-picker" class="gulla-toolbar__group">
+                <span class="gulla-toolbar__label">For</span>
+                <select id="gulla-site-select" class="gulla-toolbar__select">
+                    @foreach (var site in Model.Sites)
+                    {
+                        <option value="@site.Key" selected="@(site.Key == Model.SelectedSiteKey)">@site.Name</option>
+                    }
+                </select>
+            </span>
             <span class="gulla-toolbar__label">in</span>
             <select id="gulla-lang-select" class="gulla-toolbar__select">
                 @foreach (var lang in Model.Languages)
@@ -59,11 +69,11 @@
             </p>
 
             <nav class="gulla-tabs" role="tablist">
-                <button type="button" class="gulla-tab" data-tab="best-bets" role="tab">Pinned Results</button>
+                <button type="button" class="gulla-tab" data-tab="pinned-results" role="tab">Pinned Results</button>
                 <button type="button" class="gulla-tab" data-tab="synonyms" role="tab">Synonyms</button>
             </nav>
 
-            <section id="gulla-tab-best-bets" class="gulla-tab-panel" role="tabpanel">
+            <section id="gulla-tab-pinned-results" class="gulla-tab-panel" role="tabpanel">
                 @await Html.PartialAsync("_PinnedResults")
             </section>
 

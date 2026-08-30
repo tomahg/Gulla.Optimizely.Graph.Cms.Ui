@@ -12,7 +12,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.ViewModels
 
         public string SelectedLanguage { get; set; }
 
-        public string ActiveTab { get; set; } = "best-bets";
+        public string ActiveTab { get; set; } = "pinned-results";
     }
 
     public class SiteOption

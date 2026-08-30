@@ -42,7 +42,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
                 Languages = languages,
                 SelectedSiteKey = site ?? sites.FirstOrDefault()?.Key,
                 SelectedLanguage = lang ?? languages.FirstOrDefault(),
-                ActiveTab = string.IsNullOrEmpty(tab) ? "best-bets" : tab
+                ActiveTab = string.IsNullOrEmpty(tab) ? "pinned-results" : tab
             };
 
             return View(model);

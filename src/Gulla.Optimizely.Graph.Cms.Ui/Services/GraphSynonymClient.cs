@@ -47,7 +47,9 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
 
             var body = await response.Content.ReadAsStringAsync();
             throw new HttpRequestException(
-                $"Optimizely Graph returned {(int)response.StatusCode} {response.ReasonPhrase} for {response.RequestMessage?.RequestUri}. Body: {body}");
+                $"Optimizely Graph returned {(int)response.StatusCode} {response.ReasonPhrase} for {response.RequestMessage?.RequestUri}. Body: {body}",
+                null,
+                response.StatusCode);
         }
     }
 }

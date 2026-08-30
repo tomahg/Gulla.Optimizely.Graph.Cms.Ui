@@ -6,23 +6,25 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>1.0.45</Version>
-    <PackageVersion>1.0.45</PackageVersion>
-    <AssemblyVersion>1.0.45</AssemblyVersion>
-    <FileVersion>1.0.45</FileVersion>
+    <Version>1.0.47</Version>
+    <PackageVersion>1.0.47</PackageVersion>
+    <AssemblyVersion>1.0.47</AssemblyVersion>
+    <FileVersion>1.0.47</FileVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <PackageId>Gulla.Optimizely.Graph.Cms.Ui</PackageId>
     <ProjectName>Gulla.Optimizely.Graph.Cms.Ui</ProjectName>
-    <Title>Gulla.Optimizely.Graph.Cms.Ui</Title>
+    <Title>Optimizely Graph CMS UI</Title>
     <Authors>Tomas Hensrud Gulla</Authors>
-    <Description>Familiar style admin UI for managing Pinned Results (Best Bets) and Synonyms in Optimizely Graph.</Description>
+    <Description>Familiar Search &amp; Navigation-style admin UI for managing pinned results (formerly best bets) and synonyms in Optimizely Graph, from inside Optimizely CMS 13.</Description>
     <PackageTags>Optimizely Episerver Graph Search Synonyms BestBets PinnedResults</PackageTags>
     <PackageProjectUrl>https://github.com/tomahg/Gulla.Optimizely.Graph.Cms.Ui/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/tomahg/Gulla.Optimizely.Graph.Cms.Ui/</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Phrases sharing a target, language and priority are shown and edited as one best bet.</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>Phrases sharing a target, language and priority are shown and edited as one pinned result.</PackageReleaseNotes>
+
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,12 +33,39 @@
 
   <!-- Package the module.config + MSBuild target so consuming sites get it copied to
        modules/_protected/Gulla.Optimizely.Graph.Cms.Ui/ during build. Registering as an
-       Optimizely module with <moduleDependencies> on Shell and CMS is what makes Dojo
-       and epi-cms/widget/* available on our admin page. -->
+       Optimizely module with <moduleDependencies> on Shell and CMS is what puts the admin
+       page inside the CMS shell chrome. -->
   <ItemGroup>
+    <!-- module.config is packed explicitly below. Left in the default Content glob it is ALSO
+         swept into content/ and contentFiles/any/net10.0/ with buildAction="Content", which
+         drops a stray module.config into the root of every consuming project. -->
+    <Content Remove="module.config" />
     <None Include="module.config" Pack="true" PackagePath="contentFiles\any\any\modules\_protected\Gulla.Optimizely.Graph.Cms.Ui\module.config" />
     <None Include="build\Gulla.Optimizely.Graph.Cms.Ui.targets" Pack="true" PackagePath="build\Gulla.Optimizely.Graph.Cms.Ui.targets" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
+
+  <!--
+    The release version appears in four places that must agree, and nothing at runtime can
+    derive it: <GenerateAssemblyInfo>false</GenerateAssemblyInfo> means <AssemblyVersion> is
+    never written into the assembly, so the view cannot read it back. A mismatch is invisible
+    until the browser 404s on the CSS/JS and reports a "text/html is not a supported stylesheet
+    MIME type" error, so fail the build instead of shipping it.
+  -->
+  <Target Name="VerifyVersionStamps" BeforeTargets="Build">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\wwwroot\Static\$(Version)')" Text="Version stamp mismatch: wwwroot\Static\$(Version)\ does not exist. Rename the asset folder to $(Version) (or correct &lt;Version&gt;)." />
+
+    <XmlPeek XmlInputPath="$(MSBuildProjectDirectory)\module.config" Query="/module/@clientResourceRelativePath">
+      <Output TaskParameter="Result" ItemName="_ModuleClientResourcePath" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(MSBuildProjectDirectory)\module.config" Query="/module/@version">
+      <Output TaskParameter="Result" ItemName="_ModuleVersion" />
+    </XmlPeek>
+    <Error Condition="'@(_ModuleClientResourcePath)' != '$(Version)' or '@(_ModuleVersion)' != '$(Version)'" Text="Version stamp mismatch: module.config has version='@(_ModuleVersion)' clientResourceRelativePath='@(_ModuleClientResourcePath)', expected '$(Version)' for both." />
+
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\Views\GraphAdmin\Index.cshtml').Contains('/Static/$(Version)&quot;'))" Text="Version stamp mismatch: Views/GraphAdmin/Index.cshtml does not reference /Static/$(Version). Update the 'assets' variable." />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="EPiServer.CMS.Core" Version="[13.1.1, 14.0.0)" />

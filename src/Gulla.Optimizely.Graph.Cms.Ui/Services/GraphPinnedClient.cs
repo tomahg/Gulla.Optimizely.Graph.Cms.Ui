@@ -15,7 +15,10 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
     {
         private readonly HttpClient _httpClient;
         private readonly GraphCmsUiOptions _options;
-        private readonly ConcurrentDictionary<string, string> _collectionIdByKey = new();
+        // Static because AddHttpClient registers this class as transient: an instance field
+        // would be discarded after every single call and re-fetch the collection list each time.
+        // Graph collection ids are stable, so process lifetime is the right scope for them.
+        private static readonly ConcurrentDictionary<string, string> CollectionIdByKey = new();
 
         public GraphPinnedClient(HttpClient httpClient, IOptions<GraphCmsUiOptions> options)
         {
@@ -97,9 +100,9 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
                 response.StatusCode);
         }
 
-        public async Task<string> EnsureCollectionAsync(string key, string title)
+        private async Task<string> EnsureCollectionAsync(string key, string title)
         {
-            if (_collectionIdByKey.TryGetValue(key, out var cached))
+            if (CollectionIdByKey.TryGetValue(key, out var cached))
             {
                 return cached;
             }
@@ -107,7 +110,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
             var existing = await FindCollectionAsync(key);
             if (existing != null)
             {
-                _collectionIdByKey[key] = existing.Id;
+                CollectionIdByKey[key] = existing.Id;
                 return existing.Id;
             }
 
@@ -122,7 +125,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
             await EnsureSuccessOrThrowWithBodyAsync(response);
 
             var created = await response.Content.ReadFromJsonAsync<PinnedCollection>();
-            _collectionIdByKey[key] = created.Id;
+            CollectionIdByKey[key] = created.Id;
             return created.Id;
         }
 
@@ -137,7 +140,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
 
         private string BuildCollectionKey(string siteKey)
         {
-            var prefix = string.IsNullOrWhiteSpace(_options.CollectionKeyPrefix) ? "gulla" : _options.CollectionKeyPrefix;
+            var prefix = string.IsNullOrWhiteSpace(_options.CollectionKeyPrefix) ? "default" : _options.CollectionKeyPrefix;
             return $"{prefix}-{siteKey}".ToLowerInvariant();
         }
     }

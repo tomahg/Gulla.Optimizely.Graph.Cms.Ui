@@ -17,6 +17,8 @@
     <span class="gulla-slot-row__hint">
         Optimizely Graph exposes two synonym slots per language. Choose which slot your
         GraphQL queries reference with <code>synonyms: [ONE]</code> or <code>synonyms: [TWO]</code>.
+        Synonyms are shared by every site on this Graph instance &mdash; unlike pinned results,
+        they cannot be scoped per site.
     </span>
 </div>
 
@@ -71,9 +73,9 @@
 <div class="gulla-actions-row">
     <form id="gulla-syn-import-form" class="gulla-actions-row__import">
         <label class="gulla-button">
-            <span>&#x21A5; Import Synonym</span>
+            <span>&#x21A5; Import synonyms</span>
             <input id="gulla-syn-import-file" type="file" accept=".csv" hidden />
         </label>
     </form>
-    <a id="gulla-syn-export" class="gulla-button" href="#">&#x21A7; Export Synonym</a>
+    <a id="gulla-syn-export" class="gulla-button" href="#">&#x21A7; Export synonyms</a>
 </div>

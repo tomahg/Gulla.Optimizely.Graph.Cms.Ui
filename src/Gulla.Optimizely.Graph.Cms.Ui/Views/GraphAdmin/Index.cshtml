@@ -12,7 +12,7 @@
     // into the assembly and reading it back here yields 0.0.0.
     // BUMP TOGETHER on every release: <Version> in the .csproj, the folder name under
     // wwwroot/Static/, module.config's version + clientResourceRelativePath, and this line.
-    var assets = "/_content/Gulla.Optimizely.Graph.Cms.Ui/Static/1.0.48";
+    var assets = "/_content/Gulla.Optimizely.Graph.Cms.Ui/Static/2.0.1";
 
     // Optimizely's Dojo runtime and the epi-cms bundle. The content picker is the
     // <optimizely-content-tree> web component and needs neither, but the shell chrome
@@ -48,6 +48,15 @@
                 <select id="gulla-collection-select" class="gulla-toolbar__select"></select>
                 <button type="button" id="gulla-collection-add" class="gulla-button gulla-button--small" title="Create a new collection for this site">New</button>
                 <button type="button" id="gulla-collection-delete" class="gulla-button gulla-button--small" title="Delete this collection and all its pinned results">Delete</button>
+            </span>
+            @* The synonym slot is the counterpart of the collection picker: both name the thing
+               a query has to reference. Shown only on the Synonyms tab. *@
+            <span id="gulla-slot-picker" class="gulla-toolbar__group" hidden>
+                <span class="gulla-toolbar__label">Slot</span>
+                <select id="gulla-syn-slot" class="gulla-toolbar__select">
+                    <option value="one">One</option>
+                    <option value="two">Two</option>
+                </select>
             </span>
             @* Synonyms have no per-site dimension in Graph, so the site picker is hidden
                while that tab is active rather than implying a scope that isn't there. *@

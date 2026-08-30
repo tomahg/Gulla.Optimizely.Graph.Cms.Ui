@@ -76,7 +76,13 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
             var normalized = LanguageNormalizer.ToIsoCode(language);
             if (!string.IsNullOrWhiteSpace(normalized))
             {
-                items = items.Where(i => string.Equals(i.Language, normalized, StringComparison.OrdinalIgnoreCase)).ToList();
+                // A null language means "every locale", so those items apply to the language
+                // being filtered on and have to stay in the list — hiding them would let an
+                // editor add a duplicate pin for a phrase that is already covered.
+                items = items
+                    .Where(i => i.Language == null
+                             || string.Equals(i.Language, normalized, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
             }
 
             return items;

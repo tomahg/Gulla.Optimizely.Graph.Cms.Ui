@@ -8,19 +8,10 @@
     few minutes before they are in effect.
 </p>
 
-<div class="gulla-slot-row">
-    <span class="gulla-slot-row__label">Slot</span>
-    <select id="gulla-syn-slot" class="gulla-toolbar__select">
-        <option value="one">One</option>
-        <option value="two">Two</option>
-    </select>
-    <span class="gulla-slot-row__hint">
-        Optimizely Graph exposes two synonym slots per language. Choose which slot your
-        GraphQL queries reference with <code>synonyms: [ONE]</code> or <code>synonyms: [TWO]</code>.
-        Synonyms are shared by every site on this Graph instance &mdash; unlike pinned results,
-        they cannot be scoped per site.
-    </span>
-</div>
+@* The slot dropdown lives in the toolbar next to the language, mirroring the collection picker
+   on the other tab. What stays here is the explanation, and the slot/language pair a developer
+   has to reference — filled in by JS whenever either changes. *@
+<div id="gulla-syn-info" class="gulla-info"></div>
 
 <form id="gulla-syn-form" class="gulla-form">
     <div class="gulla-form__row">
@@ -43,6 +34,21 @@
         <div class="gulla-form__field">
             <input id="gulla-syn-bidi" type="checkbox" class="gulla-form__checkbox" />
         </div>
+    </div>
+
+    @* Graph has no all-languages synonym list, so this is a fan-out rather than a scope: it
+       writes the same rule into each enabled language's slot. The copies are independent
+       afterwards, which the hint says outright so nobody expects editing one to change them all. *@
+    <div class="gulla-form__row gulla-form__row--checkbox">
+        <span class="gulla-form__label">All Languages</span>
+        <div class="gulla-form__field">
+            <input id="gulla-syn-all-langs" type="checkbox" class="gulla-form__checkbox" />
+        </div>
+        <label for="gulla-syn-all-langs" class="gulla-form__hint gulla-form__hint--inline">
+            Writes a copy into every enabled language.
+            Graph has no shared list, so the copies are independent afterwards:
+            editing or deleting one does not affect the others.
+        </label>
     </div>
 
     <div class="gulla-form__actions">

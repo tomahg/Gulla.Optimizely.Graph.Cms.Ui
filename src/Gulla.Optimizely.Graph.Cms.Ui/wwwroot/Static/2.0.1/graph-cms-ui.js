@@ -84,10 +84,18 @@
         var synonyms = name === 'synonyms';
         var sitePicker = $('gulla-site-picker');
         if (sitePicker) sitePicker.hidden = synonyms;
-        var collectionPicker = $('gulla-collection-picker');
+        var collectionPicker = $("gulla-collection-picker");
         if (collectionPicker) collectionPicker.hidden = synonyms;
+        var slotPicker = $("gulla-slot-picker");
+        if (slotPicker) slotPicker.hidden = !synonyms;
 
         loadActiveTab();
+    }
+
+    // The pinned form's hint names the language a non-all-languages pin will land in.
+    function renderPinnedLangName() {
+        var el = $('gulla-pinned-lang-name');
+        if (el) el.textContent = state.lang || 'the selected language';
     }
 
     // Refresh the visible tab's data. Cheap for our list sizes, and it guarantees the list
@@ -168,19 +176,19 @@
 
         box.hidden = false;
         box.innerHTML =
-            '<div class="gulla-collection-info__row">' +
-                '<span class="gulla-collection-info__label">Collection key</span>' +
-                '<code class="gulla-collection-info__value">' + escapeHtml(c.key) + '</code>' +
+            '<div class="gulla-info__row">' +
+                '<span class="gulla-info__label">Collection key</span>' +
+                '<code class="gulla-info__value">' + escapeHtml(c.key) + '</code>' +
                 '<button type="button" class="gulla-button gulla-button--small" data-copy="' + escapeHtml(c.key) + '">Copy</button>' +
-                '<span class="gulla-collection-info__hint">Use this in <code>pinned: { collections: [&hellip;] }</code></span>' +
+                '<span class="gulla-info__hint">Use this in <code>pinned: { collections: [&hellip;] }</code></span>' +
             '</div>' +
-            '<div class="gulla-collection-info__row">' +
-                '<span class="gulla-collection-info__label">Collection id</span>' +
-                '<code class="gulla-collection-info__value">' + escapeHtml(c.id) + '</code>' +
+            '<div class="gulla-info__row">' +
+                '<span class="gulla-info__label">Collection id</span>' +
+                '<code class="gulla-info__value">' + escapeHtml(c.id) + '</code>' +
                 '<button type="button" class="gulla-button gulla-button--small" data-copy="' + escapeHtml(c.id) + '">Copy</button>' +
-                '<span class="gulla-collection-info__hint">For Graph’s REST API</span>' +
+                '<span class="gulla-info__hint">For Graph’s REST API</span>' +
             '</div>' +
-            '<pre class="gulla-collection-info__snippet">' + escapeHtml(
+            '<pre class="gulla-info__snippet">' + escapeHtml(
                 'pinned: { phrase: $searchText, collections: ["' + c.key + '"] }') + '</pre>';
     }
 
@@ -293,13 +301,24 @@
     // items. Items that agree on everything but the phrase — same target, language, priority and
     // active state — are the same pinned result as far as the editor is concerned, so they are grouped
     // back into one row. Differ in any of those and they are genuinely separate pinned results.
+    // language null means "all locales" and language "" means the NEUTRAL locale — two
+    // different stored values, so they must not collapse into the same group key.
+    // "*" can never appear in an ISO language code, so this cannot collide with a real one.
+    function langKeyOf(item) {
+        return item.language == null ? '*all' : item.language;
+    }
+
+    function isAllLanguages(item) {
+        return item.language == null;
+    }
+
     function groupKeyOf(item) {
         return [
-            item.targetKey || '',
-            item.language || '',
+            item.targetKey || "",
+            langKeyOf(item),
             item.priority,
-            item.isActive === false ? 'off' : 'on'
-        ].join('|');
+            item.isActive === false ? "off" : "on"
+        ].join("|");
     }
 
     function pinnedGroups() {
@@ -380,7 +399,11 @@
                 '<div class="gulla-list__row-title">' + escapeHtml(title) +
                 (disabled ? ' <span class="gulla-badge">Disabled</span>' : '') + '</div>' +
                 urlLine +
-                '<div class="gulla-list__row-body">Language: ' + escapeHtml(item.language || '') + ' &middot; Priority: ' + escapeHtml(item.priority) + '</div>' +
+                '<div class="gulla-list__row-body">Language: ' +
+                    (isAllLanguages(item)
+                        ? '<span class="gulla-badge gulla-badge--all">All languages</span>'
+                        : escapeHtml(item.language || 'neutral')) +
+                    ' &middot; Priority: ' + escapeHtml(item.priority) + '</div>' +
                 '<div class="gulla-list__chips">' + chips + '</div>' +
                 '</div>';
         }).join('');
@@ -467,6 +490,7 @@
         state.editingKey = key;
         $('gulla-pinned-phrases').value = groupPhrases(group).join(', ');
         $('gulla-pinned-priority').value = group.sample.priority || 1;
+        $("gulla-pinned-all-langs").checked = isAllLanguages(group.sample);
 
         // The picker can't be pre-selected — <optimizely-content-tree> always mounts empty and
         // exposes no way to seed it — so the current target is shown as text instead. Leaving
@@ -555,9 +579,11 @@
         }
 
         var group = state.editingKey ? groupByKey(state.editingKey) : null;
+        var allLangs = $('gulla-pinned-all-langs').checked;
         var shared = {
             targetKey: targetKey,
-            language: state.lang,
+            // null is Graph's "every locale" value. Anything else pins to that language only.
+            language: allLangs ? null : state.lang,
             priority: parseInt($('gulla-pinned-priority').value, 10) || 1,
             // The form has no field for this, so carry the existing value through — editing a
             // disabled pinned result must not quietly switch it back on.
@@ -769,9 +795,65 @@
             .then(function (items) { state.synonyms = items || []; renderSynonyms(); });
     }
 
+    // A fan-out writes one language at a time and any of them can fail on its own, so the
+    // outcome is a tally rather than a yes/no. Silence would be wrong here: "added to 5 of 7"
+    // is the only honest thing to say when two languages didn't take.
+    function reportFanOut(res) {
+        var added = res.added || [];
+        var skipped = res.skipped || [];
+        var failed = res.failed || [];
+        var total = added.length + skipped.length + failed.length;
+
+        var lines = ['Added to ' + added.length + ' of ' + total + ' languages.'];
+        if (skipped.length) {
+            lines.push('Already present in: ' + skipped.join(', '));
+        }
+        if (failed.length) {
+            lines.push('Failed in: ' + failed.map(function (f) { return f.language; }).join(', '));
+            lines.push('');
+            lines.push(failed[0].error);
+        }
+        alert(lines.join('\n'));
+    }
+
+    // The synonyms counterpart of renderCollectionInfo, deliberately the same shape: the value
+    // a query has to reference, with a copy button, then the snippet it goes into.
+    // `synonyms` sits INSIDE the field filter, not beside `where` — putting it at query level
+    // is a syntax error, so the snippet shows the nesting rather than the argument alone.
+    function renderSlotInfo() {
+        var box = $('gulla-syn-info');
+        if (!box) return;
+
+        var slot = (state.slot || 'one').toUpperCase();
+        var lang = state.lang || '—';
+
+        box.innerHTML =
+            '<div class="gulla-info__row">' +
+                '<span class="gulla-info__label">Synonym slot</span>' +
+                '<code class="gulla-info__value">' + escapeHtml(slot) + '</code>' +
+                '<button type="button" class="gulla-button gulla-button--small" data-copy="synonyms: [' + escapeHtml(slot) + ']">Copy</button>' +
+                '<span class="gulla-info__hint">Graph gives each language two slots; the query picks which one applies</span>' +
+            '</div>' +
+            '<div class="gulla-info__row">' +
+                '<span class="gulla-info__label">Language</span>' +
+                '<code class="gulla-info__value">' + escapeHtml(lang) + '</code>' +
+                '<span class="gulla-info__hint">Shared by every site on this Graph instance &mdash; unlike pinned results, synonyms cannot be scoped per site</span>' +
+            '</div>' +
+            '<pre class="gulla-info__snippet">' + escapeHtml(
+                'where: { MainBody: { contains: $searchText, synonyms: [' + slot + '] } }') + '</pre>';
+    }
+
     function bindSynonyms() {
         var form = $('gulla-syn-form');
         if (!form) return;
+
+        var info = $('gulla-syn-info');
+        if (info) {
+            info.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-copy]');
+                if (btn) copyToClipboard(btn.getAttribute('data-copy'), btn);
+            });
+        }
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -782,7 +864,9 @@
             };
             if (!body.phrases || !body.synonym) return;
 
-            fetch(api('/synonyms?' + synQs()), {
+            var allLangs = $('gulla-syn-all-langs').checked;
+
+            fetch(api('/synonyms?' + synQs(allLangs ? { allLanguages: 'true' } : null)), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -794,8 +878,11 @@
                         alert('Failed to add synonym.' + (t ? '\n\n' + t : ''));
                     });
                 }
-                form.reset();
-                loadSynonyms();
+                return r.json().then(function (res) {
+                    if (allLangs) reportFanOut(res);
+                    form.reset();
+                    loadSynonyms();
+                });
             });
         });
 
@@ -862,13 +949,15 @@
             state.editingKey = null;
             loadActiveTab();
         });
-        if (langSelect) langSelect.addEventListener('change', function () { state.lang = langSelect.value; state.pinned = null; state.synonyms = null; loadActiveTab(); });
-        if (slotSelect) slotSelect.addEventListener('change', function () { state.slot = slotSelect.value; state.synonyms = null; loadSynonyms(); });
+        if (langSelect) langSelect.addEventListener('change', function () { state.lang = langSelect.value; state.pinned = null; state.synonyms = null; renderPinnedLangName(); renderSlotInfo(); loadActiveTab(); });
+        if (slotSelect) slotSelect.addEventListener('change', function () { state.slot = slotSelect.value; state.synonyms = null; renderSlotInfo(); loadSynonyms(); });
 
         document.querySelectorAll('.gulla-tab').forEach(function (tab) {
             tab.addEventListener('click', function () { activateTab(tab.dataset.tab); });
         });
 
+        renderPinnedLangName();
+        renderSlotInfo();
         bindCollections();
         bindPinned();
         bindSynonyms();

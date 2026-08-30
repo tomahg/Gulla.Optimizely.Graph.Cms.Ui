@@ -59,10 +59,6 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 .gulla-actions-row { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
 
 
-.gulla-slot-row { display: flex; align-items: center; gap: .5rem; margin: 0 0 1.5rem; }
-.gulla-slot-row__label { color: #444; }
-.gulla-slot-row__hint { color: #888; font-size: 12px; }
-.gulla-slot-row__hint code { background: #eee; padding: 1px 4px; border-radius: 2px; font-size: 11px; }
 
 /* Pinned result rows: linked target URL, and the disabled state set by the Enable/Disable button. */
 .gulla-list__row-url { margin-bottom: .25rem; }
@@ -71,15 +67,20 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 .gulla-list__row.gulla-list__row--disabled { opacity: .55; }
 .gulla-badge { background: #6b6b6b; color: #fff; padding: .1rem .4rem; border-radius: 2px; font-size: 11px; font-weight: 400; vertical-align: middle; }
 
-/* Collection picker (toolbar) and the key/id panel on the Pinned Results tab. */
+/* Toolbar pickers, and the shared info panel used by both tabs to surface the value
+   a developer has to paste into their GraphQL query. */
 .gulla-button--small { padding: .2rem .5rem; font-size: 12px; }
 .gulla-button[disabled] { opacity: .45; cursor: default; }
 .gulla-button[disabled]:hover { background: #fff; }
 
-.gulla-collection-info { background: #f5f3ee; border: 1px solid #e6e2d8; border-radius: 2px; padding: .75rem 1rem; margin: 0 0 1.5rem; }
-.gulla-collection-info__row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin-bottom: .4rem; }
-.gulla-collection-info__label { color: #555; min-width: 8rem; }
-.gulla-collection-info__value { background: #fff; border: 1px solid #ddd; border-radius: 2px; padding: .15rem .4rem; font-family: Consolas, "Courier New", monospace; font-size: 12px; }
-.gulla-collection-info__hint { color: #888; font-size: 12px; }
-.gulla-collection-info__hint code { background: #eee; padding: 1px 4px; border-radius: 2px; font-size: 11px; }
-.gulla-collection-info__snippet { margin: .5rem 0 0; padding: .5rem .6rem; background: #fff; border: 1px solid #ddd; border-radius: 2px; font-family: Consolas, "Courier New", monospace; font-size: 12px; overflow-x: auto; }
+.gulla-info { background: #f5f3ee; border: 1px solid #e6e2d8; border-radius: 2px; padding: .75rem 1rem; margin: 0 0 1.5rem; }
+.gulla-info__row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin-bottom: .4rem; }
+.gulla-info__label { color: #555; min-width: 8rem; }
+.gulla-info__value { background: #fff; border: 1px solid #ddd; border-radius: 2px; padding: .15rem .4rem; font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+.gulla-info__hint { color: #888; font-size: 12px; }
+.gulla-info__hint code { background: #eee; padding: 1px 4px; border-radius: 2px; font-size: 11px; }
+.gulla-info__snippet { margin: .5rem 0 0; padding: .5rem .6rem; background: #fff; border: 1px solid #ddd; border-radius: 2px; font-family: Consolas, "Courier New", monospace; font-size: 12px; overflow-x: auto; }
+
+/* Inline hint sitting beside a checkbox in a form row, and the All-languages badge. */
+.gulla-form__hint--inline { align-self: center; cursor: pointer; max-width: 46ch; line-height: 1.4; }
+.gulla-badge--all { background: #4a41c4; }

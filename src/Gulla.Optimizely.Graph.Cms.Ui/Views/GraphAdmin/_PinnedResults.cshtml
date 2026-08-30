@@ -9,7 +9,7 @@
 
 @* Filled in by JS whenever the collection changes. The key is the value a developer needs for
    their GraphQL query, so it is the one shown first and given the copy button. *@
-<div id="gulla-collection-info" class="gulla-collection-info" hidden></div>
+<div id="gulla-collection-info" class="gulla-info" hidden></div>
 
 <form id="gulla-pinned-form" class="gulla-form">
     <div class="gulla-form__row">
@@ -29,6 +29,19 @@
                the only way to tell the editor which content the pinned result currently points at. *@
             <div id="gulla-pinned-target-current" class="gulla-form__hint" hidden></div>
         </div>
+    </div>
+
+    @* Graph stores language: null to mean "every locale". That is a real stored value, not a
+       fan-out — one item that fires whatever language the visitor is searching in. *@
+    <div class="gulla-form__row gulla-form__row--checkbox">
+        <span class="gulla-form__label">All Languages</span>
+        <div class="gulla-form__field">
+            <input id="gulla-pinned-all-langs" type="checkbox" class="gulla-form__checkbox" />
+        </div>
+        <label for="gulla-pinned-all-langs" class="gulla-form__hint gulla-form__hint--inline">
+            Fires regardless of the language being searched.
+            Leave unchecked to pin only in <span id="gulla-pinned-lang-name">the selected language</span>.
+        </label>
     </div>
 
     <div class="gulla-form__row">

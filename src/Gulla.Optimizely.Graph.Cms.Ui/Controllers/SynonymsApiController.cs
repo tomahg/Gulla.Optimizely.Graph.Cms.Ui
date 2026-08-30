@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -57,10 +59,22 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
             public bool Bidirectional { get; set; }
         }
 
+        /// <summary>
+        /// Graph has no all-languages synonym list — <c>language_routing</c> is a required
+        /// parameter and each language is a separate document. <paramref name="allLanguages"/>
+        /// is therefore a write-time fan-out, not a scope: it writes the same rule into every
+        /// enabled language's slot, and the copies are independent from that moment on.
+        /// Each language is written separately and can fail separately, so the response reports
+        /// per-language outcomes rather than a single success or failure.
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> Create([FromQuery] string lang, [FromQuery] string slot, [FromBody] CreateSynonymRequest body)
+        public async Task<IActionResult> Create(
+            [FromQuery] string lang,
+            [FromQuery] string slot,
+            [FromQuery] bool allLanguages,
+            [FromBody] CreateSynonymRequest body)
         {
-            if (string.IsNullOrWhiteSpace(lang))
+            if (string.IsNullOrWhiteSpace(lang) && !allLanguages)
             {
                 return BadRequest("lang query parameter is required.");
             }
@@ -81,24 +95,64 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
                 return BadRequest("At least one phrase is required.");
             }
 
-            try
-            {
-                var resolvedSlot = ResolveSlot(slot);
-                var current = _csv.ParseGraphBody(await _synonymClient.GetRawAsync(resolvedSlot, lang));
+            var resolvedSlot = ResolveSlot(slot);
+            var targets = allLanguages ? EnabledLanguages() : new List<string> { lang };
+            var added = new List<string>();
+            var skipped = new List<string>();
+            var failed = new List<LanguageFailure>();
 
-                if (current.Any(e => e.RowKey == newEntry.RowKey))
+            foreach (var target in targets)
+            {
+                try
                 {
-                    return Conflict("That synonym already exists in this language and slot.");
-                }
+                    var current = _csv.ParseGraphBody(await _synonymClient.GetRawAsync(resolvedSlot, target));
+                    if (current.Any(e => e.RowKey == newEntry.RowKey))
+                    {
+                        skipped.Add(target);
+                        continue;
+                    }
 
-                current.Add(newEntry);
-                await _synonymClient.PutRawAsync(resolvedSlot, lang, _csv.ToGraphBody(current));
-                return Ok(newEntry);
+                    current.Add(newEntry);
+                    await _synonymClient.PutRawAsync(resolvedSlot, target, _csv.ToGraphBody(current));
+                    added.Add(target);
+                }
+                catch (HttpRequestException ex)
+                {
+                    failed.Add(new LanguageFailure { Language = target, Error = ex.Message });
+                }
             }
-            catch (HttpRequestException ex)
+
+            // A single-language add that failed is a plain error; nothing partial happened.
+            if (!allLanguages && failed.Count > 0)
             {
-                return GraphError(ex);
+                return StatusCode((int)HttpStatusCode.BadGateway, failed[0].Error);
             }
+            if (!allLanguages && skipped.Count > 0)
+            {
+                return Conflict("That synonym already exists in this language and slot.");
+            }
+
+            return Ok(new { entry = newEntry, added, skipped, failed });
+        }
+
+        public class LanguageFailure
+        {
+            public string Language { get; set; }
+            public string Error { get; set; }
+        }
+
+        /// <summary>
+        /// The enabled CMS languages reduced to the ISO codes Graph routes on. Two CMS languages
+        /// can share one code ("en" and "en-GB" both route to "en"), and writing that slot twice
+        /// would be a wasted read-modify-write over the same document.
+        /// </summary>
+        private List<string> EnabledLanguages()
+        {
+            return _resolver.ListLanguages()
+                .Select(LanguageNormalizer.ToIsoCode)
+                .Where(l => !string.IsNullOrWhiteSpace(l))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         /// <summary>

@@ -57,6 +57,19 @@ The two features are scoped differently, because Graph scopes them differently:
 
 Synonyms have **no per-site dimension in Graph** — a synonym list belongs to a language and a slot, and applies to every site sharing that Graph instance. The site picker and the collection picker are therefore both hidden on the Synonyms tab.
 
+### Working across languages
+
+The two features reach "all languages" by different routes, because Graph supports it for one and not the other:
+
+| | Mechanism | What it is |
+|---|---|---|
+| Pinned Results | `language: null` on the stored item | A **real scope**. One item, stored once, fires whatever language is being searched. |
+| Synonyms | *Add to all languages* checkbox | A **write-time fan-out**. One copy per enabled language, independent afterwards. |
+
+For pinned results, tick **All languages** on the form and the pin applies everywhere. Such pins stay visible whatever language the toolbar is set to — they apply to that language too — and are badged *All languages* in the list.
+
+For synonyms, tick **All languages** and the rule is written into every enabled language's slot for the selected slot number. Because there is no shared list behind it, editing or deleting one language's copy leaves the others alone, and the result is reported per language (`Added to 5 of 7 languages`) rather than as a single success. Languages sharing an ISO code — `en` and `en-GB` both route to `en` — are written once.
+
 Pinned results live in **Graph collections**. Every site gets a `default-<site>` collection, created on first use, and you can add more from the toolbar — one per editorial use case, e.g. `black-friday-<site>`. Collection keys are always `<name>-<site>`; the site suffix is what keeps one site's pins out of another's.
 
 > **Per-site scoping only takes effect if your query asks for it.** Graph evaluates **all active
@@ -116,11 +129,13 @@ Deleting a collection breaks any query still passing its key, so the confirmatio
 
 ### Synonym slots
 
-Graph exposes **two synonym slots per language**, named `ONE` and `TWO`. Which one applies is chosen by the query, not by the data, so your GraphQL must say which slot it wants:
+Graph exposes **two synonym slots per language**, named `ONE` and `TWO`. Which one applies is chosen by the query, not by the data, so your GraphQL must say which slot it wants.
+
+`synonyms` goes **inside the field filter**, alongside the operator — not as a sibling of `where`:
 
 ```graphql
 {
-  ArticlePage(where: { _fulltext: { match: "fruit" } }, synonyms: [ONE]) {
+  ArticlePage(locale: en, where: { MainBody: { contains: "fruit", synonyms: [ONE] } }) {
     items { Name }
   }
 }
@@ -205,7 +220,7 @@ inside the policy.
 - Pinned results display the content's own title/description. The pinned item carries no display fields to override them with.
 - When several pinned items share a phrase, Graph **shows only the top five**, ordered by priority. Storage isn't capped.
 - Graph matches a pinned item's `phrases` value as a single literal string. The comma-separated box in the UI is therefore split into one Graph item per phrase; a phrase cannot itself contain a comma.
-- Synonyms are **per-language**; there is no shared "all languages" slot.
+- Synonyms are **per-language** in Graph; there is no shared "all languages" slot. The UI's *Add to all languages* checkbox works around this by writing a copy into every enabled language, but the copies are independent from that point on &mdash; editing or deleting one does not touch the others.
 - A synonym list is stored as one document and saved whole, so two editors working on the same language and slot at the same time will overwrite each other.
 
 ## License

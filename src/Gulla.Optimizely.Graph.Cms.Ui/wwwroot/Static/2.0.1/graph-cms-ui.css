@@ -82,5 +82,7 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 .gulla-info__snippet { margin: .5rem 0 0; padding: .5rem .6rem; background: #fff; border: 1px solid #ddd; border-radius: 2px; font-family: Consolas, "Courier New", monospace; font-size: 12px; overflow-x: auto; }
 
 /* Inline hint sitting beside a checkbox in a form row, and the All-languages badge. */
-.gulla-form__hint--inline { align-self: center; cursor: pointer; max-width: 46ch; line-height: 1.4; }
+/* Fills its grid column rather than being capped to a reading measure — it is a one-line
+   control hint, so wrapping early leaves obvious empty space to the right of it. */
+.gulla-form__hint--inline { align-self: center; cursor: pointer; line-height: 1.4; }
 .gulla-badge--all { background: #4a41c4; }

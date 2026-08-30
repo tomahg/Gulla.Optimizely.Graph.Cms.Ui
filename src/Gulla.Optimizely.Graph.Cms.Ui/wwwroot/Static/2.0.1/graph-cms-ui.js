@@ -837,7 +837,7 @@
             '<div class="gulla-info__row">' +
                 '<span class="gulla-info__label">Language</span>' +
                 '<code class="gulla-info__value">' + escapeHtml(lang) + '</code>' +
-                '<span class="gulla-info__hint">Shared by every site on this Graph instance &mdash; unlike pinned results, synonyms cannot be scoped per site</span>' +
+                '<span class="gulla-info__hint">Shared by every site on this Graph instance. Unlike pinned results, synonyms cannot be scoped per site</span>' +
             '</div>' +
             '<pre class="gulla-info__snippet">' + escapeHtml(
                 'where: { MainBody: { contains: $searchText, synonyms: [' + slot + '] } }') + '</pre>';

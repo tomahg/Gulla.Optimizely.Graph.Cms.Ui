@@ -86,3 +86,7 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
    control hint, so wrapping early leaves obvious empty space to the right of it. */
 .gulla-form__hint--inline { align-self: center; cursor: pointer; line-height: 1.4; }
 .gulla-badge--all { background: #4a41c4; }
+
+/* The shared-list row is a caution, not a fact to copy — it gets the warning ground. */
+.gulla-info__row--warn { background: #fdf6e3; border-left: 3px solid #d9b25f; padding: .45rem .7rem; margin: -.25rem 0 .6rem; }
+.gulla-info__row--warn .gulla-info__hint { color: #6b6250; }

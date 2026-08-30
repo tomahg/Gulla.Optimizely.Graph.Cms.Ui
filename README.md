@@ -41,7 +41,7 @@ The package reuses Optimizely Graph's existing configuration. Make sure you alre
 
 ## Usage
 
-After install, log in to the CMS as an administrator and go to **Settings → Graph Optimization** (in the left sidebar, under *Data & Sync Management*, alongside Scheduled Jobs and GraphiQL). You'll find two tabs:
+After install, log in to the CMS as an administrator, open the product menu in the top bar — the **CMS ⌄** dropdown — and pick **Graph**. It sits alongside CMS itself, in the slot Search & Navigation used to occupy. The left menu then offers the two features, which are also tabs on the page itself:
 
 - **Pinned Results** — pin specific CMS content to the top of the search results for chosen phrases. Organised into collections, scoped per site and per language. Previously called Best Bets in Search & Navigation.
 - **Synonyms** — define one-way (`a => b`) and bidirectional (`a <=> b`) term equivalences. Scoped per language and per slot. Import/export the CMS 12 CSV format directly.
@@ -220,7 +220,7 @@ inside the policy.
 - Pinned results display the content's own title/description. The pinned item carries no display fields to override them with.
 - When several pinned items share a phrase, Graph **shows only the top five**, ordered by priority. Storage isn't capped.
 - Graph matches a pinned item's `phrases` value as a single literal string. The comma-separated box in the UI is therefore split into one Graph item per phrase; a phrase cannot itself contain a comma.
-- Synonyms are **per-language** in Graph; there is no shared "all languages" slot. The UI's *Add to all languages* checkbox works around this by writing a copy into every enabled language, but the copies are independent from that point on &mdash; editing or deleting one does not touch the others.
+- Synonyms are **per-language** in Graph, and Graph folds related variants into one list — `no`, `nb`, `nn` and `nn-NO` all address the same document, verified against a live instance. The Synonyms tab names the languages that share a list when it can measure it. There is no shared "all languages" slot: omitting `language_routing` writes a real `standard` slot, but that applies only to queries with no `locale` argument. The UI's *Add to all languages* checkbox works around this by writing a copy into every enabled language, but the copies are independent from that point on &mdash; editing or deleting one does not touch the others.
 - A synonym list is stored as one document and saved whole, so two editors working on the same language and slot at the same time will overwrite each other.
 
 ## License

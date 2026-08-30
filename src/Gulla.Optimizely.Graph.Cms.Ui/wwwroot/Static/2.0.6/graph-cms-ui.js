@@ -11,6 +11,7 @@
         pinned: null,
         pinnedNames: {},
         synonyms: null,
+        langShares: null,
         targetResolve: null,
         editingKey: null
     };
@@ -792,7 +793,7 @@
     function loadSynonyms() {
         return fetch(api('/synonyms?' + synQs()))
             .then(function (r) { return r.ok ? r.json() : []; })
-            .then(function (items) { state.synonyms = items || []; renderSynonyms(); });
+            .then(function (items) { state.synonyms = items || []; renderSynonyms(); return loadLanguageShares(); });
     }
 
     // A fan-out writes one language at a time and any of them can fail on its own, so the
@@ -804,7 +805,9 @@
         var failed = res.failed || [];
         var total = added.length + skipped.length + failed.length;
 
-        var lines = ['Added to ' + added.length + ' of ' + total + ' languages.'];
+        var lines = [added.length === total
+            ? 'Added to all ' + total + ' languages.'
+            : 'Added to ' + added.length + ' of ' + total + ' languages.'];
         if (skipped.length) {
             lines.push('Already present in: ' + skipped.join(', '));
         }
@@ -820,6 +823,19 @@
     // a query has to reference, with a copy button, then the snippet it goes into.
     // `synonyms` sits INSIDE the field filter, not beside `where` — putting it at query level
     // is a syntax error, so the snippet shows the nesting rather than the argument alone.
+    // Which other CMS languages are served the same list as the selected one. Measured by the
+    // server, because Graph folds related variants together and documents no mapping.
+    function loadLanguageShares() {
+        return fetch(api('/synonyms/languages?' + synQs()))
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (items) { state.langShares = items || []; renderSlotInfo(); })
+            .catch(function () { state.langShares = []; renderSlotInfo(); });
+    }
+
+    function shareForCurrentLanguage() {
+        return (state.langShares || []).filter(function (l) { return l.id === state.lang; })[0] || null;
+    }
+
     function renderSlotInfo() {
         var box = $('gulla-syn-info');
         if (!box) return;
@@ -827,7 +843,26 @@
         var slot = (state.slot || 'one').toUpperCase();
         var lang = state.lang || '—';
 
-        box.innerHTML =
+        // The warning belongs where the risk is: only when languages actually share a list
+        // do we say so, and name them. When sharing is ruled out — or cannot be told apart,
+        // because every list is still empty — the row is simply left out.
+        var share = shareForCurrentLanguage();
+        var shared = share && share.sharedWith.length ? share : null;
+
+        var sharedRow = shared
+            ? '<div class="gulla-info__row gulla-info__row--warn">' +
+                  '<span class="gulla-info__label">Shared list</span>' +
+                  '<code class="gulla-info__value">' + escapeHtml([lang].concat(shared.sharedWith).join(', ')) + '</code>' +
+                  '<span class="gulla-info__hint">' +
+                      (shared.inferred
+                          ? 'These languages return an identical list, so Graph appears to serve them one document. '
+                          : 'Graph routes these languages to one document. ') +
+                      '<strong>Adding or deleting here changes all of them.</strong>' +
+                  '</span>' +
+              '</div>'
+            : '';
+
+        box.innerHTML = sharedRow +
             '<div class="gulla-info__row">' +
                 '<span class="gulla-info__label">Synonym slot</span>' +
                 '<code class="gulla-info__value">' + escapeHtml(slot) + '</code>' +
@@ -949,8 +984,8 @@
             state.editingKey = null;
             loadActiveTab();
         });
-        if (langSelect) langSelect.addEventListener('change', function () { state.lang = langSelect.value; state.pinned = null; state.synonyms = null; renderPinnedLangName(); renderSlotInfo(); loadActiveTab(); });
-        if (slotSelect) slotSelect.addEventListener('change', function () { state.slot = slotSelect.value; state.synonyms = null; renderSlotInfo(); loadSynonyms(); });
+        if (langSelect) langSelect.addEventListener('change', function () { state.lang = langSelect.value; state.pinned = null; state.synonyms = null; state.langShares = null; renderPinnedLangName(); renderSlotInfo(); loadActiveTab(); });
+        if (slotSelect) slotSelect.addEventListener('change', function () { state.slot = slotSelect.value; state.synonyms = null; state.langShares = null; renderSlotInfo(); loadSynonyms(); });
 
         document.querySelectorAll('.gulla-tab').forEach(function (tab) {
             tab.addEventListener('click', function () { activateTab(tab.dataset.tab); });

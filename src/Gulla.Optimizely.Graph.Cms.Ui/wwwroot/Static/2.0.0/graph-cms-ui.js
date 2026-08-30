@@ -90,6 +90,15 @@
         var slotPicker = $("gulla-slot-picker");
         if (slotPicker) slotPicker.hidden = !synonyms;
 
+        // Each tab has a server route of its own — the shell's left rail can only tell which
+        // item is current from the path. Switching tabs is client-side, so keep the address
+        // bar honest: a reload or a bookmark then lands on the tab that is actually showing.
+        // replaceState, not pushState: the tabs are one page, not two history entries.
+        var path = '/GraphCmsUi/' + name;
+        if (window.history && window.history.replaceState && location.pathname !== path) {
+            window.history.replaceState(null, '', path + location.search);
+        }
+
         loadActiveTab();
     }
 
@@ -782,10 +791,10 @@
 
         tbody.innerHTML = rows.map(function (s) {
             return '<tr>' +
-                '<td>' + escapeHtml((s.phrases || []).join(', ')) + '</td>' +
+                '<td class="gulla-table__term">' + escapeHtml((s.phrases || []).join(', ')) + '</td>' +
                 '<td class="gulla-table__direction">' + directionIcon(s.bidirectional) + '</td>' +
-                '<td>' + escapeHtml(s.synonym || '') + '</td>' +
-                '<td><button class="gulla-button" data-delete-syn="' + escapeHtml(s.rowKey) + '">Delete</button></td>' +
+                '<td class="gulla-table__term">' + escapeHtml(s.synonym || '') + '</td>' +
+                '<td class="gulla-table__actions"><button class="gulla-button" data-delete-syn="' + escapeHtml(s.rowKey) + '">Delete</button></td>' +
                 '</tr>';
         }).join('');
     }

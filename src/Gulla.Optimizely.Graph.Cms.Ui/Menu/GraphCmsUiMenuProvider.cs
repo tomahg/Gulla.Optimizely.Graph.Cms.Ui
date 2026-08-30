@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using EPiServer.Shell.Navigation;
 using EPiServer.Shell.Navigation.Internal;
 using Gulla.Optimizely.Graph.Cms.Ui.Configuration;
+using Gulla.Optimizely.Graph.Cms.Ui.Controllers;
 
 namespace Gulla.Optimizely.Graph.Cms.Ui.Menu
 {
@@ -30,6 +31,11 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Menu
             // an empty list and a list still loading look identical to it. They also change how
             // the product switcher behaves: a product with children swaps the rail instead of
             // navigating, so the rail entries are what actually opens the page.
+            //
+            // Each child needs a distinct *path*. The rail compares an item's Url to the
+            // current location without stripping the query string, so a "?tab=" URL matches
+            // nothing — and with no matching item it decides it has no current section and
+            // renders collapsed, icons only, no labels. Hence the routes on GraphAdminController.
             return
             [
                 new UrlMenuItem("Graph", Root, "/GraphCmsUi")
@@ -37,13 +43,13 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Menu
                     AuthorizationPolicy = GraphCmsUiAuthorizationPolicy.Default,
                     SortIndex = SortIndex.Late
                 },
-                new UrlMenuItem("Pinned Results", Root + "/pinnedresults", "/GraphCmsUi?tab=pinned-results")
+                new UrlMenuItem("Pinned Results", Root + "/pinnedresults", "/GraphCmsUi/" + GraphAdminController.PinnedResultsTab)
                 {
                     AuthorizationPolicy = GraphCmsUiAuthorizationPolicy.Default,
                     SortIndex = 10,
                     IconName = "thumbtack"
                 },
-                new UrlMenuItem("Synonyms", Root + "/synonyms", "/GraphCmsUi?tab=synonyms")
+                new UrlMenuItem("Synonyms", Root + "/synonyms", "/GraphCmsUi/" + GraphAdminController.SynonymsTab)
                 {
                     AuthorizationPolicy = GraphCmsUiAuthorizationPolicy.Default,
                     SortIndex = 20,

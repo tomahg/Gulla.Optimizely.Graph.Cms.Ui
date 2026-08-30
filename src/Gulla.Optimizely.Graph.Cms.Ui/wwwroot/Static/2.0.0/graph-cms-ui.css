@@ -52,7 +52,20 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 .gulla-table { width: 100%; border-collapse: collapse; }
 .gulla-table th, .gulla-table td { text-align: left; padding: .65rem 1rem; border-bottom: 1px solid #eee; }
 .gulla-table tbody tr:nth-child(even) { background: #f5f3ee; }
-.gulla-table__direction { width: 4rem; text-align: center; }
+/* The blanket rule above is `.gulla-table th` — a class plus a type — so a lone class here
+   loses on specificity and every cell stays left-aligned. Hence the `th.`/`td.` prefixes. */
+
+/* Splitting the slack evenly between the two terms puts the direction badge on the table's
+   centre line, reading as the operator between them rather than a third column of data. */
+.gulla-table th.gulla-table__term,
+.gulla-table td.gulla-table__term { width: 50%; }
+.gulla-table th.gulla-table__direction,
+.gulla-table td.gulla-table__direction { width: 4rem; text-align: center; }
+
+/* Shrink-to-fit and right-aligned, so the row's action sits at the edge of the table
+   instead of floating in the middle of an over-wide last column. */
+.gulla-table th.gulla-table__actions,
+.gulla-table td.gulla-table__actions { width: 1%; text-align: right; white-space: nowrap; }
 .gulla-table__empty td { text-align: center; color: #888; padding: 1.5rem; background: #f5f3ee; }
 .gulla-direction-icon { display: inline-block; width: 1.5rem; height: 1.5rem; line-height: 1.5rem; border-radius: 50%; background: #b8b8b8; color: #fff; text-align: center; font-size: 14px; }
 

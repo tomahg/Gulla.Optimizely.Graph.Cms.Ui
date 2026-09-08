@@ -53,7 +53,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Menu
                 {
                     AuthorizationPolicy = GraphCmsUiAuthorizationPolicy.Default,
                     SortIndex = 20,
-                    IconName = "arrow-right-arrow-left"
+                    IconName = "arrow-right"
                 }
             ];
         }

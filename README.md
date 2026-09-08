@@ -1,13 +1,28 @@
-# Gulla.Optimizely.Graph.Cms.Ui for CMS 13
+# Gulla.Optimizely.Graph.Cms.Ui for CMS 12
 
-A familiar Search & Navigation–style admin UI for **Optimizely CMS 13** that lets editors manage **Pinned Results** (formerly *Best Bets*) and **Synonyms** through Optimizely Graph, without leaving the CMS.
+A familiar Search & Navigation–style admin UI for **Optimizely CMS 12** that lets editors manage **Pinned Results** (formerly *Best Bets*) and **Synonyms** through Optimizely Graph, without leaving the CMS.
 
 When Optimizely retired Search & Navigation in favour of Optimizely Graph, the editor UI for Best Bets and Synonyms went with it. This package brings that UI back, talking to Graph's REST APIs under the hood.
 
+## Which version do I need?
+
+| Package version | Optimizely CMS | .NET |
+|---|---|---|
+| **1.x** (this branch) | CMS 12 | .NET 8 |
+| 2.x | CMS 13 | .NET 10 |
+
+The two lines are feature-identical. Only the CMS shell integration differs.
+
 ## Requirements
 
-- .NET 10
-- Optimizely CMS 13.1.1 or later (`EPiServer.CMS.Core` / `EPiServer.CMS.UI.Core`)
+- .NET 8
+- Optimizely CMS 12 with `EPiServer.CMS.UI.Core` **12.30.0 or later**.
+
+  12.30.0 is the genuine floor, not a conservative one: `Html.RegisterOptimizelyWebComponents()`
+  and the `EPiServer.Shell.UI.WebComponents` namespace do not exist before it, and the
+  `optimizely-web-components.js` bundle behind the `<optimizely-content-tree>` content picker
+  first ships in `EPiServer.CMS.UI` 12.30.0. Verified by building this project against every
+  12.x release: 12.29.1 and below do not compile.
 - An Optimizely Graph instance the site is already configured against
 
 ## Installation
@@ -44,7 +59,7 @@ The package reuses Optimizely Graph's existing configuration. Make sure you alre
 After install, log in to the CMS as an administrator, open the product menu in the top bar — the **CMS ⌄** dropdown — and pick **Graph**. It sits alongside CMS itself, in the slot Search & Navigation used to occupy. The left menu then offers the two features, which are also tabs on the page itself:
 
 - **Pinned Results** — pin specific CMS content to the top of the search results for chosen phrases. Organised into collections, scoped per site and per language. Previously called Best Bets in Search & Navigation.
-- **Synonyms** — define one-way (`a => b`) and bidirectional (`a <=> b`) term equivalences. Scoped per language and per slot. Import/export the CMS 12 CSV format directly.
+- **Synonyms** — define one-way (`a => b`) and bidirectional (`a <=> b`) term equivalences. Scoped per language and per slot. Import/export the Search & Navigation CSV format directly.
 
 ### Scoping
 
@@ -90,30 +105,11 @@ query Search($searchText: String) {
 }
 ```
 
-With the .NET client (`Optimizely.Graph.Cms.Query`):
-
-```csharp
-using Optimizely.Graph.Cms.Query;
-using Optimizely.Graph.Cms.Query.Abstractions;
-
-public class SearchService(IGraphContentClient client)
-{
-    public async Task<IEnumerable<ArticlePage>> SearchAsync(string phrase) =>
-        await client
-            .QueryContent<ArticlePage>()
-            .SearchFor(phrase)
-            .WithPinned(phrase, "default-mysite")   // collection KEY, despite the parameter name
-            .SetLocale("en")
-            .GetAsContentAsync();
-}
-```
-
-> ⚠️ `WithPinned` has three overloads, and two of them are traps:
-> `WithPinned(string phrase, Guid? collectionId)` and `WithPinned(string phrase, IEnumerable<Guid>)`
-> take GUIDs, which Graph does not match on — they return zero pinned results, silently.
-> Use `WithPinned(string phrase, params string[])` and pass **keys**, or `WithPinned(phrase)`
-> alone to evaluate every active collection. The `params string[]` parameter is *named*
-> `collectionIds`, which does not help.
+> **The `Optimizely.Graph.Cms.Query` fluent client is CMS 13 only.** It ships as `13.x` targeting
+> `net10.0`; there is no CMS 12 build. On CMS 12 the Graph integration package is
+> `Optimizely.ContentGraph.Cms` (`3.x`, `net6.0`), and it covers indexing and synchronisation only —
+> it exposes no pinned-results or synonym query API at all. Send the GraphQL above yourself, from
+> whatever HTTP or GraphQL client the site already uses.
 
 If you run a **single site** with a single collection, you can omit the collection argument entirely — the default behaviour of evaluating every active collection is then what you want.
 
@@ -141,38 +137,10 @@ Graph exposes **two synonym slots per language**, named `ONE` and `TWO`. Which o
 }
 ```
 
-The same thing with the .NET client (`Optimizely.Graph.Cms.Query`), which is how most CMS 13 sites query Graph:
-
-```csharp
-using Optimizely.Graph.Cms.Query;
-using Optimizely.Graph.Cms.Query.Abstractions;
-using Optimizely.Graph.Cms.Query.Filtering;
-using Optimizely.Graph.Cms.Query.Implementation.Request.Expressions; // SynonymSlot
-
-public class SearchService(IGraphContentClient client)
-{
-    // Full-text search, expanded with the synonyms in slot One.
-    public async Task<IEnumerable<ArticlePage>> SearchAsync(string phrase) =>
-        await client
-            .QueryContent<ArticlePage>()
-            .SearchFor(phrase, synonymSlots: [SynonymSlot.One])
-            .SetLocale("en")
-            .GetAsContentAsync();
-
-    // Or apply synonyms to one field instead of the whole document.
-    public async Task<IEnumerable<ArticlePage>> ByHeadingAsync(string phrase) =>
-        await client
-            .QueryContent<ArticlePage>()
-            .Where(x => x.Heading.Match(phrase, SynonymSlot.One))
-            .GetAsContentAsync();
-}
-```
-
-Three things that cost time if you don't know them:
-
-- `SynonymSlot` lives in `Optimizely.Graph.Cms.Query.Implementation.Request.Expressions` — an `Implementation` namespace, but it is the public enum you need. Values are `SynonymSlot.One` and `SynonymSlot.Two`.
-- `UsingFullText()` is obsolete; `SearchFor(query, highlightTag, boost, synonymSlots)` replaces it and is the only overload that accepts slots.
-- `GetAsContentAsync()` returns `IGetAsContentResult<T>`, which *is* an `IEnumerable<T>` — there's no `.Content` property to unwrap.
+As with pinned results, there is no CMS 12 fluent client for this — `Optimizely.ContentGraph.Cms`
+does not expose synonym slots, so the `synonyms: [ONE]` argument has to go into the GraphQL you send
+yourself. Slot names are upper-cased in GraphQL (`ONE`, `TWO`) and lower-cased in the REST API
+(`?synonym_slot=one`), which is an easy mismatch to trip over when comparing the two.
 
 Pick the matching slot in the UI before adding or importing synonyms. Changes can take a few minutes to take effect.
 

@@ -1,5 +1,7 @@
 @using EPiServer.Framework.Web
+@using EPiServer.Framework.Web.Mvc.Html
 @using EPiServer.Framework.Web.Resources
+@using EPiServer.Shell.Navigation
 @using EPiServer.Shell.UI.WebComponents
 @inject IRequiredClientResourceList RequiredResources
 @model GraphAdminViewModel
@@ -12,12 +14,13 @@
     // into the assembly and reading it back here yields 0.0.0.
     // BUMP TOGETHER on every release: <Version> in the .csproj, the folder name under
     // wwwroot/Static/, module.config's version + clientResourceRelativePath, and this line.
-    var assets = "/_content/Gulla.Optimizely.Graph.Cms.Ui/Static/2.0.0";
+    var assets = "/_content/Gulla.Optimizely.Graph.Cms.Ui/Static/1.0.0";
 
     // Optimizely's Dojo runtime and the epi-cms bundle. The content picker is the
-    // <optimizely-content-tree> web component and needs neither, but the shell chrome
-    // (<platform-navigation>) is rendered by scripts these bundles pull in. Shell's widgets.js
-    // MUST load before CMS's — the order of Require() calls determines script emission order.
+    // <optimizely-content-tree> web component and needs neither, but the shell chrome that
+    // CreatePlatformNavigationMenu() emits is driven by scripts these bundles pull in. Shell's
+    // widgets.js MUST load before CMS's — the order of Require() calls determines script
+    // emission order.
     RequiredResources.Require("epi.shell.ui");
     RequiredResources.Require("epi-cms.widgets.base");
 }
@@ -27,14 +30,13 @@
     <meta charset="utf-8" />
     <title>Graph Optimization</title>
     <link rel="stylesheet" href="@assets/graph-cms-ui.css" />
-    <required-client-resources area="@RenderingTags.Header" />
+    @Html.RequiredClientResources(RenderingTags.Header)
     @Html.Raw(Html.RegisterOptimizelyWebComponents())
 </head>
 <body class="gulla-graph-ui">
-    <platform-navigation />
+    @Html.CreatePlatformNavigationMenu()
     @Html.AntiForgeryToken()
-    <episerver-common-settings />
-    <platform-navigation-wrapper>
+    <div @Html.ApplyPlatformNavigation()>
         <div class="gulla-toolbar">
             @* Collections hold pinned results only — the picker is populated by JS because its
                contents depend on the selected site. Hidden on the Synonyms tab. *@
@@ -93,7 +95,7 @@
                 @await Html.PartialAsync("_Synonyms")
             </section>
         </div>
-    </platform-navigation-wrapper>
+    </div>
 
     <script>
         window.gullaGraphUi = {
@@ -101,6 +103,6 @@
         };
     </script>
     <script src="@assets/graph-cms-ui.js"></script>
-    <required-client-resources area="@RenderingTags.Footer" />
+    @Html.RequiredClientResources(RenderingTags.Footer)
 </body>
 </html>

@@ -5,25 +5,25 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Version>2.0.0</Version>
-    <PackageVersion>2.0.0</PackageVersion>
-    <AssemblyVersion>2.0.0</AssemblyVersion>
-    <FileVersion>2.0.0</FileVersion>
+    <TargetFramework>net8.0</TargetFramework>
+    <Version>1.0.0</Version>
+    <PackageVersion>1.0.0</PackageVersion>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <PackageId>Gulla.Optimizely.Graph.Cms.Ui</PackageId>
     <ProjectName>Gulla.Optimizely.Graph.Cms.Ui</ProjectName>
     <Title>Optimizely Graph CMS UI</Title>
     <Authors>Tomas Hensrud Gulla</Authors>
-    <Description>Familiar Search &amp; Navigation-style admin UI for managing pinned results (formerly best bets) and synonyms in Optimizely Graph, from inside Optimizely CMS 13.</Description>
+    <Description>Familiar Search &amp; Navigation-style admin UI for managing pinned results (formerly best bets) and synonyms in Optimizely Graph, from inside Optimizely CMS 12.</Description>
     <PackageTags>Optimizely Episerver Graph Search Synonyms BestBets PinnedResults</PackageTags>
     <PackageProjectUrl>https://github.com/tomahg/Gulla.Optimizely.Graph.Cms.Ui/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/tomahg/Gulla.Optimizely.Graph.Cms.Ui/</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Phrases sharing a target, language and priority are shown and edited as one pinned result.</PackageReleaseNotes>
+    <PackageReleaseNotes>First release for Optimizely CMS 12 on .NET 8. Feature parity with the 2.x line for CMS 13.</PackageReleaseNotes>
 
   </PropertyGroup>
 
@@ -37,7 +37,7 @@
        page inside the CMS shell chrome. -->
   <ItemGroup>
     <!-- module.config is packed explicitly below. Left in the default Content glob it is ALSO
-         swept into content/ and contentFiles/any/net10.0/ with buildAction="Content", which
+         swept into content/ and contentFiles/any/net8.0/ with buildAction="Content", which
          drops a stray module.config into the root of every consuming project. -->
     <Content Remove="module.config" />
     <None Include="module.config" Pack="true" PackagePath="contentFiles\any\any\modules\_protected\Gulla.Optimizely.Graph.Cms.Ui\module.config" />
@@ -68,8 +68,7 @@
   </Target>
 
   <ItemGroup>
-    <PackageReference Include="EPiServer.CMS.Core" Version="[13.1.1, 14.0.0)" />
-    <PackageReference Include="EPiServer.CMS.UI.Core" Version="[13.1.1, 14.0.0)" />
+    <PackageReference Include="EPiServer.CMS.UI.Core" Version="[12.30.0, 13.0.0)" />
   </ItemGroup>
 
 </Project>

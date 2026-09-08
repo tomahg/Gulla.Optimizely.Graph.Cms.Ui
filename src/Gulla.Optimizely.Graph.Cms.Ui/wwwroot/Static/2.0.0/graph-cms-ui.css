@@ -21,6 +21,7 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 .gulla-form { display: grid; gap: 1rem; margin-bottom: 2rem; }
 .gulla-form__row { display: grid; grid-template-columns: 140px 1fr; align-items: center; gap: 1rem; }
 .gulla-form__row--checkbox { grid-template-columns: 140px auto 1fr; gap: .5rem; }
+.gulla-form__row--hinted { grid-template-columns: 140px auto 1fr; gap: .5rem; }
 .gulla-form__label { color: #444; text-align: right; }
 .gulla-form__field { display: flex; flex-direction: column; }
 .gulla-form__checkbox { width: 1rem; height: 1rem; margin: 0; justify-self: start; }
@@ -98,6 +99,7 @@ html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFo
 /* Fills its grid column rather than being capped to a reading measure — it is a one-line
    control hint, so wrapping early leaves obvious empty space to the right of it. */
 .gulla-form__hint--inline { align-self: center; cursor: pointer; line-height: 1.4; }
+.gulla-form__hint--beside { align-self: center; line-height: 1.4; }
 .gulla-badge--all { background: #4a41c4; }
 
 /* The shared-list row is a caution, not a fact to copy — it gets the warning ground. */

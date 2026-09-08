@@ -44,11 +44,22 @@
         </label>
     </div>
 
-    <div class="gulla-form__row">
+    @* Graph applies priority in two directions AT ONCE, which no editor can be expected to guess
+       (measured against cg.optimizely.com 2026-09-08):
+         - among the pins that apply, the LOWEST number ranks first, so 1 is top;
+         - but when a phrase has more than five pins it keeps the five HIGHEST numbers, so the
+           item numbered 1 is the very first one dropped.
+       Hence the hint. It sits beside the field, not under it: .gulla-form__hint is
+       align-self: flex-end in a column flex, which would strand it at the far right of the row,
+       a long way from a 6rem input. *@
+    <div class="gulla-form__row gulla-form__row--hinted">
         <label for="gulla-pinned-priority" class="gulla-form__label">Priority</label>
         <div class="gulla-form__field">
             <input id="gulla-pinned-priority" type="number" step="any" value="1" class="gulla-form__input gulla-form__input--small" />
         </div>
+        <small class="gulla-form__hint gulla-form__hint--beside">
+            1 ranks first. Max 5 show per phrase. Add a sixth and the lowest number is the one dropped.
+        </small>
     </div>
 
     <div class="gulla-form__actions">

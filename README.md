@@ -58,10 +58,12 @@ The package reuses Optimizely Graph's existing configuration. Make sure you alre
 
 ## Usage
 
-After install, log in to the CMS as an administrator, open the product menu in the top bar — the **CMS ⌄** dropdown — and pick **Graph**. It sits alongside CMS itself, in the slot Search & Navigation used to occupy. The left menu then offers the two features, which are also tabs on the page itself:
+After install, log in to the CMS as an administrator, open the product menu in the top bar — the **CMS ⌄** dropdown — and pick **Optimizely Graph**. The left menu is Optimizely's own Graph menu (GraphiQL, Admin, Content Sync) with the addon's two features added at the bottom; they are also tabs on the page itself:
 
 - **Pinned Results** — pin specific CMS content to the top of the search results for chosen phrases. Organised into collections, scoped per site and per language. Previously called Best Bets in Search & Navigation.
 - **Synonyms** — define one-way (`a => b`) and bidirectional (`a <=> b`) term equivalences. Scoped per language and per slot. Import/export the Search & Navigation CSV format (`phrase,bidirectional,synonym`) directly.
+
+If you would rather have the addon as a product of its own — a **Graph** entry in the product switcher with its own left menu — set `MenuParentPath` to an empty string (see [Configuration](#configuration)). That is also what you get automatically when the `Optimizely.ContentGraph.Cms` package is not installed, since the menu to nest under does not exist.
 
 ### Scoping
 
@@ -163,7 +165,8 @@ never entered twice. The addon's own settings live in a `Gulla:GraphCmsUi` secti
   "Gulla": {
     "GraphCmsUi": {
       "DefaultLanguage": "nb-NO",
-      "DefaultSlot": "two"
+      "DefaultSlot": "two",
+      "MenuParentPath": ""
     }
   }
 }
@@ -176,6 +179,7 @@ builder.Services.AddGraphCmsUi(options =>
 {
     options.DefaultLanguage = "nb-NO"; // default: the first enabled language
     options.DefaultSlot = "two";       // default: "one"
+    options.MenuParentPath = "";       // default: "/global/ContentGraph"
 });
 ```
 
@@ -183,10 +187,13 @@ builder.Services.AddGraphCmsUi(options =>
 |---|---|---|
 | `DefaultLanguage` | first enabled language | Language pre-selected in the language picker on both tabs when the URL doesn't name one. |
 | `DefaultSlot` | `one` | Synonym slot used when the UI doesn't specify one. |
+| `MenuParentPath` | `/global/ContentGraph` | Menu section the Pinned Results and Synonyms items are placed under. The default is Optimizely Graph's own left menu. Empty gives the addon its own **Graph** entry in the product switcher. |
 
 `DefaultLanguage` accepts either a CMS language ID (`nb-NO`) or a bare ISO code (`nb`) — both
 match the enabled language either way round. A value that matches no enabled language is
 ignored, and the first enabled language is used.
+
+`MenuParentPath` is the path of a section another package has registered with the shell. The default is the one `Optimizely.ContentGraph.Cms` creates, and it is only used when that package is present; otherwise the addon falls back to a section of its own. Any other value is used as given, so a site can follow the path if a future Optimizely release renames it.
 
 ## Authorization
 

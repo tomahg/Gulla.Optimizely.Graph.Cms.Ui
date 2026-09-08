@@ -61,7 +61,7 @@ The package reuses Optimizely Graph's existing configuration. Make sure you alre
 After install, log in to the CMS as an administrator, open the product menu in the top bar — the **CMS ⌄** dropdown — and pick **Graph**. It sits alongside CMS itself, in the slot Search & Navigation used to occupy. The left menu then offers the two features, which are also tabs on the page itself:
 
 - **Pinned Results** — pin specific CMS content to the top of the search results for chosen phrases. Organised into collections, scoped per site and per language. Previously called Best Bets in Search & Navigation.
-- **Synonyms** — define one-way (`a => b`) and bidirectional (`a <=> b`) term equivalences. Scoped per language and per slot. Import/export the Search & Navigation CSV format directly.
+- **Synonyms** — define one-way (`a => b`) and bidirectional (`a <=> b`) term equivalences. Scoped per language and per slot. Import/export the Search & Navigation CSV format (`phrase,bidirectional,synonym`) directly.
 
 ### Scoping
 
@@ -81,11 +81,11 @@ The two features reach "all languages" by different routes, because Graph suppor
 | | Mechanism | What it is |
 |---|---|---|
 | Pinned Results | `language: null` on the stored item | A **real scope**. One item, stored once, fires whatever language is being searched. |
-| Synonyms | *Add to all languages* checkbox | A **write-time fan-out**. One copy per enabled language, independent afterwards. |
+| Synonyms | **All Languages** checkbox | A **write-time fan-out**. One copy per enabled language, independent afterwards. |
 
-For pinned results, tick **All languages** on the form and the pin applies everywhere. Such pins stay visible whatever language the toolbar is set to — they apply to that language too — and are badged *All languages* in the list.
+For pinned results, tick **All Languages** on the form and the pin applies everywhere. Such pins stay visible whatever language the toolbar is set to — they apply to that language too — and are badged *All languages* in the list.
 
-For synonyms, tick **All languages** and the rule is written into every enabled language's slot for the selected slot number. Because there is no shared list behind it, editing or deleting one language's copy leaves the others alone, and the result is reported per language (`Added to 5 of 7 languages`) rather than as a single success. Languages sharing an ISO code — `en` and `en-GB` both route to `en` — are written once.
+For synonyms, tick **All Languages** and the rule is written into every enabled language's slot for the selected slot number. Because there is no shared list behind it, editing or deleting one language's copy leaves the others alone, and the result is reported per language (`Added to 5 of 7 languages`) rather than as a single success. Languages sharing an ISO code — `en` and `en-GB` both route to `en` — are written once.
 
 Pinned results live in **Graph collections**. Every site gets a `default-<site>` collection, created on first use, and you can add more from the toolbar — one per editorial use case, e.g. `black-friday-<site>`. Collection keys are always `<name>-<site>`; the site suffix is what keeps one site's pins out of another's.
 
@@ -119,7 +119,7 @@ If you run a **single site** with a single collection, you can omit the collecti
 
 The **Collection** picker in the toolbar applies to the Pinned Results tab only:
 
-- **Select** — switches which collection you're editing. Opens on `default`.
+- **The dropdown** — switches which collection you're editing. Opens on `default`.
 - **New** — prompts for a name, slugified into `<name>-<site>`. Use one per campaign or use case.
 - **Delete** — removes the collection **and every pinned result in it**, in all languages. The `default` collection can't be deleted (it would just be recreated empty); delete its pinned results individually instead.
 
@@ -210,7 +210,7 @@ inside the policy.
 - Pinned results display the content's own title/description. The pinned item carries no display fields to override them with.
 - When several pinned items share a phrase, Graph **shows only the top five**, ordered by priority. Storage isn't capped.
 - Graph matches a pinned item's `phrases` value as a single literal string. The comma-separated box in the UI is therefore split into one Graph item per phrase; a phrase cannot itself contain a comma.
-- Synonyms are **per-language** in Graph, and Graph folds related variants into one list — `no`, `nb`, `nn` and `nn-NO` all address the same document, verified against a live instance. The Synonyms tab names the languages that share a list when it can measure it. There is no shared "all languages" slot: omitting `language_routing` writes a real `standard` slot, but that applies only to queries with no `locale` argument. The UI's *Add to all languages* checkbox works around this by writing a copy into every enabled language, but the copies are independent from that point on &mdash; editing or deleting one does not touch the others.
+- Synonyms are **per-language** in Graph, and Graph folds related variants into one list — `no`, `nb`, `nn` and `nn-NO` all address the same document, verified against a live instance. The Synonyms tab names the languages that share a list when it can measure it. There is no shared "all languages" slot: omitting `language_routing` writes a real `standard` slot, but that applies only to queries with no `locale` argument. The UI's **All Languages** checkbox works around this by writing a copy into every enabled language, but the copies are independent from that point on &mdash; editing or deleting one does not touch the others.
 - A synonym list is stored as one document and saved whole, so two editors working on the same language and slot at the same time will overwrite each other.
 
 ## License

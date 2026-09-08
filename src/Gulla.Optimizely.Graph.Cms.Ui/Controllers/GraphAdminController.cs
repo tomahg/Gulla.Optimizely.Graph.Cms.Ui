@@ -69,7 +69,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
                 Sites = sites,
                 Languages = languages,
                 SelectedSiteKey = site ?? sites.FirstOrDefault()?.Key,
-                SelectedLanguage = lang ?? languages.FirstOrDefault(),
+                SelectedLanguage = lang ?? _resolver.DefaultLanguage(),
                 ActiveTab = tab
             };
 

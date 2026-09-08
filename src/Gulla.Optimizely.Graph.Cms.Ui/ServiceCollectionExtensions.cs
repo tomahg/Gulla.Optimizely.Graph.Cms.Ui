@@ -51,7 +51,13 @@ namespace Gulla.Optimizely.Graph.Cms.Ui
         {
             services.AddOptions<GraphCmsUiOptions>().Configure<IConfiguration>((options, configuration) =>
             {
+                // Graph credentials come from Optimizely's own section, so they are never
+                // entered twice. The UI-only settings (DefaultSlot, DefaultLanguage) have no
+                // business in Optimizely's section, so they get a Gulla one — bound second, so
+                // it also wins if a value is set in both places. Finally the setup action, so
+                // code always overrides configuration.
                 configuration.GetSection("Optimizely:ContentGraph").Bind(options);
+                configuration.GetSection("Gulla:GraphCmsUi").Bind(options);
                 setupAction?.Invoke(options);
             });
 

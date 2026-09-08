@@ -322,11 +322,27 @@
         return item.language == null;
     }
 
+    // Graph types priority as a double and enforces no bounds, so 0, negatives and decimals are
+    // all valid stored values — and a pin written outside this UI can hold any of them.
+    // parseInt would truncate 2.5 to 2, and the old `|| 1` fallback rewrote a deliberate 0.
+    // Only a blank or unparseable field falls back to the default now.
+    function parsePriority(raw) {
+        var n = parseFloat(raw);
+        return isNaN(n) ? 1 : n;
+    }
+
+    // null is a real stored priority, distinct from every number, and escapeHtml renders it as
+    // an empty gap after the label. Name it instead. Editing such an item leaves the number
+    // field blank, so saving assigns the default rather than writing null back.
+    function priorityLabel(value) {
+        return value == null ? 'not set' : String(value);
+    }
+
     function groupKeyOf(item) {
         return [
             item.targetKey || "",
             langKeyOf(item),
-            item.priority,
+            item.priority == null ? "*none" : item.priority,
             item.isActive === false ? "off" : "on"
         ].join("|");
     }
@@ -413,7 +429,7 @@
                     (isAllLanguages(item)
                         ? '<span class="gulla-badge gulla-badge--all">All languages</span>'
                         : escapeHtml(item.language || 'neutral')) +
-                    ' &middot; Priority: ' + escapeHtml(item.priority) + '</div>' +
+                    ' &middot; Priority: ' + escapeHtml(priorityLabel(item.priority)) + '</div>' +
                 '<div class="gulla-list__chips">' + chips + '</div>' +
                 '</div>';
         }).join('');
@@ -499,7 +515,7 @@
 
         state.editingKey = key;
         $('gulla-pinned-phrases').value = groupPhrases(group).join(', ');
-        $('gulla-pinned-priority').value = group.sample.priority || 1;
+        $('gulla-pinned-priority').value = group.sample.priority == null ? '' : group.sample.priority;
         $("gulla-pinned-all-langs").checked = isAllLanguages(group.sample);
 
         // The picker can't be pre-selected — <optimizely-content-tree> always mounts empty and
@@ -594,7 +610,7 @@
             targetKey: targetKey,
             // null is Graph's "every locale" value. Anything else pins to that language only.
             language: allLangs ? null : state.lang,
-            priority: parseInt($('gulla-pinned-priority').value, 10) || 1,
+            priority: parsePriority($('gulla-pinned-priority').value),
             // The form has no field for this, so carry the existing value through — editing a
             // disabled pinned result must not quietly switch it back on.
             isActive: group ? group.sample.isActive !== false : true

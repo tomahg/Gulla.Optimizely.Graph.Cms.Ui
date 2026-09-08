@@ -1,5 +1,7 @@
 # Gulla.Optimizely.Graph.Cms.Ui for CMS 13
 
+This is the readme for the CMS 13 version, the version for CMS 12 is [over here](https://github.com/tomahg/Gulla.Optimizely.Graph.Cms.Ui/tree/cms12).
+
 A familiar Search & Navigation–style admin UI for **Optimizely CMS 13** that lets editors manage **Pinned Results** (formerly *Best Bets*) and **Synonyms** through Optimizely Graph, without leaving the CMS.
 
 When Optimizely retired Search & Navigation in favour of Optimizely Graph, the editor UI for Best Bets and Synonyms went with it. This package brings that UI back, talking to Graph's REST APIs under the hood.

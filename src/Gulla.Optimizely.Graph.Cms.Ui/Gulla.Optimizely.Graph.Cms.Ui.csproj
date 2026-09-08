@@ -6,10 +6,10 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>2.1.0</Version>
-    <PackageVersion>2.1.0</PackageVersion>
-    <AssemblyVersion>2.1.0</AssemblyVersion>
-    <FileVersion>2.1.0</FileVersion>
+    <Version>2.2.0</Version>
+    <PackageVersion>2.2.0</PackageVersion>
+    <AssemblyVersion>2.2.0</AssemblyVersion>
+    <FileVersion>2.2.0</FileVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <PackageId>Gulla.Optimizely.Graph.Cms.Ui</PackageId>

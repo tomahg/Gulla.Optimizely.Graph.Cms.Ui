@@ -1,6 +1,7 @@
 @using EPiServer.Framework.Web
 @using EPiServer.Framework.Web.Resources
 @using EPiServer.Shell.UI.WebComponents
+@using Gulla.Optimizely.Graph.Cms.Ui.Services
 @inject IRequiredClientResourceList RequiredResources
 @model GraphAdminViewModel
 @{
@@ -12,7 +13,7 @@
     // into the assembly and reading it back here yields 0.0.0.
     // BUMP TOGETHER on every release: <Version> in the .csproj, the folder name under
     // wwwroot/Static/, module.config's version + clientResourceRelativePath, and this line.
-    var assets = "/_content/Gulla.Optimizely.Graph.Cms.Ui/Static/2.1.0";
+    var assets = "/_content/Gulla.Optimizely.Graph.Cms.Ui/Static/2.2.0";
 
     // Optimizely's Dojo runtime and the epi-cms bundle. The content picker is the
     // <optimizely-content-tree> web component and needs neither, but the shell chrome
@@ -70,6 +71,11 @@
                 {
                     <option value="@lang" selected="@(lang == Model.SelectedLanguage)">@lang</option>
                 }
+                @* Synonyms only: the list Graph keeps for requests without language_routing, which
+                   Optimizely's Search Management UI shows as "ANY". Rules land there when created
+                   in that UI, so this is how an editor finds and removes them. JS hides the option
+                   on the Pinned Results tab, where it has no meaning. *@
+                <option value="@SynonymLanguage.NoLocaleId" data-synonyms-only selected="@(SynonymLanguage.IsNoLocale(Model.SelectedLanguage))">ANY (no locale)</option>
             </select>
         </div>
 
@@ -97,7 +103,8 @@
 
     <script>
         window.gullaGraphUi = {
-            initialTab: '@Html.Raw(Model.ActiveTab)'
+            initialTab: '@Html.Raw(Model.ActiveTab)',
+            noLocaleLang: '@SynonymLanguage.NoLocaleId'
         };
     </script>
     <script src="@assets/graph-cms-ui.js"></script>

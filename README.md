@@ -72,6 +72,13 @@ For pinned results, tick **All Languages** on the form and the pin applies every
 
 For synonyms, tick **All Languages** and the rule is written into every enabled language's slot for the selected slot number. Because there is no shared list behind it, editing or deleting one language's copy leaves the others alone, and the result is reported per language (`Added to 5 of 7 languages`) rather than as a single success. Languages sharing an ISO code — `en` and `en-GB` both route to `en` — are written once.
 
+#### The "ANY" language
+
+Optimizely's own Search Management UI lists some synonyms with the language **ANY**. That is the list Graph stores when a request carries no `language_routing` at all, and this addon shows it as **ANY (no locale)** at the bottom of the language picker on the Synonyms tab. You can list, add, delete, import and export it like any other language.
+
+The name promises more than it delivers. Measured against a live instance: rules in that list fire only for queries with **no `locale` argument** (or `locale: ALL`), and never for a locale-scoped query such as `locale: en`. A site search that passes the visitor's language does not see them. The UI says so on the tab. To make a rule apply everywhere a visitor can search, pick a language and tick **All Languages** instead; the fan-out deliberately never writes into the ANY list.
+
+
 Pinned results live in **Graph collections**. Every site gets a `default-<site>` collection, created on first use, and you can add more from the toolbar — one per editorial use case, e.g. `black-friday-<site>`. Collection keys are always `<name>-<site>`; the site suffix is what keeps one site's pins out of another's.
 
 > **Per-site scoping only takes effect if your query asks for it.** Graph evaluates **all active

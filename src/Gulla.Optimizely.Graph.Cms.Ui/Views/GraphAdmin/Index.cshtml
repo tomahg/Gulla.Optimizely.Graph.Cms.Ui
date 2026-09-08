@@ -3,6 +3,7 @@
 @using EPiServer.Framework.Web.Resources
 @using EPiServer.Shell.Navigation
 @using EPiServer.Shell.UI.WebComponents
+@using Gulla.Optimizely.Graph.Cms.Ui.Services
 @inject IRequiredClientResourceList RequiredResources
 @model GraphAdminViewModel
 @{
@@ -72,6 +73,11 @@
                 {
                     <option value="@lang" selected="@(lang == Model.SelectedLanguage)">@lang</option>
                 }
+                @* Synonyms only: the list Graph keeps for requests without language_routing, which
+                   Optimizely's Search Management UI shows as "ANY". Rules land there when created
+                   in that UI, so this is how an editor finds and removes them. JS hides the option
+                   on the Pinned Results tab, where it has no meaning. *@
+                <option value="@SynonymLanguage.NoLocaleId" data-synonyms-only selected="@(SynonymLanguage.IsNoLocale(Model.SelectedLanguage))">ANY (no locale)</option>
             </select>
         </div>
 
@@ -99,7 +105,8 @@
 
     <script>
         window.gullaGraphUi = {
-            initialTab: '@Html.Raw(Model.ActiveTab)'
+            initialTab: '@Html.Raw(Model.ActiveTab)',
+            noLocaleLang: '@SynonymLanguage.NoLocaleId'
         };
     </script>
     <script src="@assets/graph-cms-ui.js"></script>

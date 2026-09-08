@@ -43,7 +43,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
 
             try
             {
-                var body = await _synonymClient.GetRawAsync(ResolveSlot(slot), lang);
+                var body = await _synonymClient.GetRawAsync(ResolveSlot(slot), SynonymLanguage.RouteFor(lang));
                 return Ok(_csv.ParseGraphBody(body));
             }
             catch (HttpRequestException ex)
@@ -150,8 +150,9 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
         }
 
         /// <summary>
-        /// Graph has no all-languages synonym list — <c>language_routing</c> is a required
-        /// parameter and each language is a separate document. <paramref name="allLanguages"/>
+        /// Graph has no all-languages synonym list — each language is a separate document, and
+        /// the list stored without <c>language_routing</c> (see <see cref="SynonymLanguage"/>)
+        /// applies only to queries without a locale, not to every locale. <paramref name="allLanguages"/>
         /// is therefore a write-time fan-out, not a scope: it writes the same rule into every
         /// enabled language's slot, and the copies are independent from that moment on.
         /// Each language is written separately and can fail separately, so the response reports
@@ -186,6 +187,10 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
             }
 
             var resolvedSlot = ResolveSlot(slot);
+
+            // The no-locale list ("ANY" in Optimizely's UI) is not an enabled language, so a fan-out
+            // never writes into it: that would multiply rules a locale-scoped query cannot see.
+            // It only ever receives a direct add while it is the selected language.
             var targets = allLanguages
                 ? EnabledLanguages()
                 : new List<TargetLanguage> { TargetLanguage.For(lang) };
@@ -264,7 +269,11 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
 
             public static TargetLanguage For(string languageId)
             {
-                return new TargetLanguage { Id = languageId, Route = LanguageNormalizer.ToIsoCode(languageId) };
+                return new TargetLanguage
+                {
+                    Id = languageId,
+                    Route = LanguageNormalizer.ToIsoCode(SynonymLanguage.RouteFor(languageId))
+                };
             }
         }
 
@@ -304,7 +313,8 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
             try
             {
                 var resolvedSlot = ResolveSlot(slot);
-                var current = _csv.ParseGraphBody(await _synonymClient.GetRawAsync(resolvedSlot, lang));
+                var route = SynonymLanguage.RouteFor(lang);
+                var current = _csv.ParseGraphBody(await _synonymClient.GetRawAsync(resolvedSlot, route));
                 var remaining = current.Where(e => e.RowKey != rowKey).ToList();
 
                 if (remaining.Count == current.Count)
@@ -312,7 +322,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
                     return NotFound("No synonym with that row key in this language and slot.");
                 }
 
-                await _synonymClient.PutRawAsync(resolvedSlot, lang, _csv.ToGraphBody(remaining));
+                await _synonymClient.PutRawAsync(resolvedSlot, route, _csv.ToGraphBody(remaining));
                 return NoContent();
             }
             catch (HttpRequestException ex)
@@ -345,7 +355,8 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
             try
             {
                 var resolvedSlot = ResolveSlot(slot);
-                var current = _csv.ParseGraphBody(await _synonymClient.GetRawAsync(resolvedSlot, lang));
+                var route = SynonymLanguage.RouteFor(lang);
+                var current = _csv.ParseGraphBody(await _synonymClient.GetRawAsync(resolvedSlot, route));
                 var existingKeys = current.Select(e => e.RowKey).ToHashSet();
 
                 var added = 0;
@@ -358,7 +369,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
                     }
                 }
 
-                await _synonymClient.PutRawAsync(resolvedSlot, lang, _csv.ToGraphBody(current));
+                await _synonymClient.PutRawAsync(resolvedSlot, route, _csv.ToGraphBody(current));
 
                 // Report both numbers: the editor picked a file with `parsed.Count` rows in it,
                 // and saying "imported 40" when 12 were duplicates that changed nothing is a lie.
@@ -381,7 +392,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
             try
             {
                 var resolvedSlot = ResolveSlot(slot);
-                var body = await _synonymClient.GetRawAsync(resolvedSlot, lang);
+                var body = await _synonymClient.GetRawAsync(resolvedSlot, SynonymLanguage.RouteFor(lang));
                 var entries = _csv.ParseGraphBody(body);
                 var csvBytes = Encoding.UTF8.GetBytes(_csv.ToCsv(entries));
                 return File(csvBytes, "text/csv", $"synonyms-{lang}-slot-{resolvedSlot}.csv");

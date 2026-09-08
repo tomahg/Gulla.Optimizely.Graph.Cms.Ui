@@ -20,6 +20,13 @@
 
     function api(path) { return '/GraphCmsUi/api' + path; }
 
+    // The synonym list Graph keeps for requests without language_routing. Optimizely's own
+    // Search Management UI labels it "ANY"; the server names the id so the two never drift.
+    // It is a synonyms-only choice: pinned results have a real all-languages value instead.
+    var NO_LOCALE = (window.gullaGraphUi && window.gullaGraphUi.noLocaleLang) || 'any';
+
+    function isNoLocale(lang) { return lang === NO_LOCALE; }
+
     // Pinned items live in a collection, addressed by Graph's collection id. The site is not
     // part of this — the collection already encodes which site it belongs to.
     function qs(extra) {
@@ -89,6 +96,28 @@
         if (collectionPicker) collectionPicker.hidden = synonyms;
         var slotPicker = $("gulla-slot-picker");
         if (slotPicker) slotPicker.hidden = !synonyms;
+
+        // The no-locale list exists for synonyms only. On the pinned tab the option is taken
+        // out of the picker, and if it was the selection the first real language takes over —
+        // otherwise the pinned API would be asked for a language called "any".
+        var langSelect = $('gulla-lang-select');
+        var noLocaleOption = langSelect ? langSelect.querySelector('option[data-synonyms-only]') : null;
+        if (noLocaleOption) {
+            noLocaleOption.hidden = !synonyms;
+            noLocaleOption.disabled = !synonyms;
+            if (!synonyms && isNoLocale(state.lang)) {
+                var fallback = langSelect.querySelector('option:not([data-synonyms-only])');
+                if (fallback) {
+                    langSelect.value = fallback.value;
+                    state.lang = fallback.value;
+                    state.pinned = null;
+                    state.synonyms = null;
+                    state.langShares = null;
+                    renderPinnedLangName();
+                    renderSlotInfo();
+                }
+            }
+        }
 
         // Each tab has a server route of its own — the shell's left rail can only tell which
         // item is current from the path. Switching tabs is client-side, so keep the address
@@ -866,7 +895,8 @@
         if (!box) return;
 
         var slot = (state.slot || 'one').toUpperCase();
-        var lang = state.lang || '—';
+        var noLocale = isNoLocale(state.lang);
+        var lang = noLocale ? 'ANY' : (state.lang || '—');
 
         // The warning belongs where the risk is: only when languages actually share a list
         // do we say so, and name them. When sharing is ruled out — or cannot be told apart,
@@ -894,11 +924,24 @@
                 '<button type="button" class="gulla-button gulla-button--small" data-copy="synonyms: [' + escapeHtml(slot) + ']">Copy</button>' +
                 '<span class="gulla-info__hint">Graph gives each language two slots; the query picks which one applies</span>' +
             '</div>' +
-            '<div class="gulla-info__row">' +
-                '<span class="gulla-info__label">Language</span>' +
-                '<code class="gulla-info__value">' + escapeHtml(lang) + '</code>' +
-                '<span class="gulla-info__hint">Shared by every site on this Graph instance. Unlike pinned results, synonyms cannot be scoped per site</span>' +
-            '</div>' +
+            // "ANY" is Optimizely's label for the list stored with no language_routing. Measured:
+            // it fires only for queries with no locale argument, never for a locale-scoped one,
+            // so the row says so instead of letting the name promise every language.
+            (noLocale
+                ? '<div class="gulla-info__row gulla-info__row--warn">' +
+                      '<span class="gulla-info__label">Language</span>' +
+                      '<code class="gulla-info__value">ANY</code>' +
+                      '<span class="gulla-info__hint">' +
+                          'The list Graph keeps for queries with <strong>no locale</strong>, called ANY in the Optimizely Search Management UI. ' +
+                          '<strong>A search that passes a locale never uses these rules.</strong> ' +
+                          'Shown so rules created there can be found and deleted. To apply a rule everywhere, pick a language and tick All Languages instead.' +
+                      '</span>' +
+                  '</div>'
+                : '<div class="gulla-info__row">' +
+                      '<span class="gulla-info__label">Language</span>' +
+                      '<code class="gulla-info__value">' + escapeHtml(lang) + '</code>' +
+                      '<span class="gulla-info__hint">Shared by every site on this Graph instance. Unlike pinned results, synonyms cannot be scoped per site</span>' +
+                  '</div>') +
             '<pre class="gulla-info__snippet">' + escapeHtml(
                 'where: { MainBody: { contains: $searchText, synonyms: [' + slot + '] } }') + '</pre>';
     }

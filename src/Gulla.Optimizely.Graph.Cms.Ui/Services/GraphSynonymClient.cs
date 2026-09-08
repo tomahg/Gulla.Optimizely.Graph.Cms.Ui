@@ -33,9 +33,19 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
             await EnsureSuccessOrThrowWithBodyAsync(response);
         }
 
+        /// <summary>
+        /// A null or empty language addresses the list Graph keeps for requests WITHOUT
+        /// <c>language_routing</c> — the one Optimizely's UI labels "ANY". Leaving the parameter
+        /// out is the honest form; sending it empty happens to land in the same list, but so
+        /// does any value Graph does not recognise, so the omission is spelled out here.
+        /// </summary>
         private static string BuildUri(string slot, string language)
         {
-            return $"resources/synonyms?language_routing={WebUtility.UrlEncode(LanguageNormalizer.ToIsoCode(language))}&synonym_slot={WebUtility.UrlEncode(slot)}";
+            var route = LanguageNormalizer.ToIsoCode(language);
+            var slotParameter = "synonym_slot=" + WebUtility.UrlEncode(slot);
+            return string.IsNullOrEmpty(route)
+                ? "resources/synonyms?" + slotParameter
+                : "resources/synonyms?language_routing=" + WebUtility.UrlEncode(route) + "&" + slotParameter;
         }
 
         private static async Task EnsureSuccessOrThrowWithBodyAsync(HttpResponseMessage response)

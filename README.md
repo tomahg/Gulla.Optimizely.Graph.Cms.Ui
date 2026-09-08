@@ -178,18 +178,38 @@ Pick the matching slot in the UI before adding or importing synonyms. Changes ca
 
 ## Configuration
 
-`AddGraphCmsUi()` binds `GraphCmsUiOptions` from `Optimizely:ContentGraph`. One extra setting is not part of that section and can only be set in code:
+Graph credentials are read from Optimizely's own `Optimizely:ContentGraph` section, so they are
+never entered twice. The addon's own settings live in a `Gulla:GraphCmsUi` section:
+
+```json
+{
+  "Gulla": {
+    "GraphCmsUi": {
+      "DefaultLanguage": "nb-NO",
+      "DefaultSlot": "two"
+    }
+  }
+}
+```
+
+The same settings can be set in code instead, which takes precedence over `appsettings.json`:
 
 ```csharp
 builder.Services.AddGraphCmsUi(options =>
 {
-    options.DefaultSlot = "two"; // default: "one"
+    options.DefaultLanguage = "nb-NO"; // default: the first enabled language
+    options.DefaultSlot = "two";       // default: "one"
 });
 ```
 
 | Option | Default | Purpose |
 |---|---|---|
+| `DefaultLanguage` | first enabled language | Language pre-selected in the language picker on both tabs when the URL doesn't name one. |
 | `DefaultSlot` | `one` | Synonym slot used when the UI doesn't specify one. |
+
+`DefaultLanguage` accepts either a CMS language ID (`nb-NO`) or a bare ISO code (`nb`) — both
+match the enabled language either way round. A value that matches no enabled language is
+ignored, and the first enabled language is used.
 
 ## Authorization
 

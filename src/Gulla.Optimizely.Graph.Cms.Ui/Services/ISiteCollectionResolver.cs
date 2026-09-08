@@ -13,5 +13,11 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
         /// language and slot only — there is no per-site dimension to resolve.
         /// </summary>
         string DefaultSlot();
+
+        /// <summary>
+        /// The language pre-selected in the UI when the caller doesn't name one. Always an
+        /// enabled language ID, so the rendered &lt;option&gt; list can match it.
+        /// </summary>
+        string DefaultLanguage();
     }
 }

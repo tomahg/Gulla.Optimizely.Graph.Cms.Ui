@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using EPiServer.Applications;
@@ -43,6 +44,37 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
             // "two"). Per-site scoping lives in pinned-result collections; synonyms have no
             // per-site dimension at all.
             return string.IsNullOrWhiteSpace(_options.DefaultSlot) ? "one" : _options.DefaultSlot;
+        }
+
+        /// <summary>
+        /// Resolves the configured default language against the enabled ones. Matching is
+        /// forgiving in both directions — the CMS deals in culture codes ("nb-NO") while Graph,
+        /// and therefore anyone reading Graph's docs, deals in ISO codes ("nb") — so a configured
+        /// "nb" selects the enabled "nb-NO" and vice versa. Anything that still doesn't match an
+        /// enabled language falls back to the first one, so the picker never renders with
+        /// nothing selected.
+        /// </summary>
+        public string DefaultLanguage()
+        {
+            var languages = ListLanguages();
+
+            if (string.IsNullOrWhiteSpace(_options.DefaultLanguage))
+            {
+                return languages.FirstOrDefault();
+            }
+
+            var configured = _options.DefaultLanguage.Trim();
+
+            var exact = languages.FirstOrDefault(l => string.Equals(l, configured, StringComparison.OrdinalIgnoreCase));
+            if (exact != null)
+            {
+                return exact;
+            }
+
+            var iso = LanguageNormalizer.ToIsoCode(configured);
+
+            return languages.FirstOrDefault(l => LanguageNormalizer.ToIsoCode(l) == iso)
+                   ?? languages.FirstOrDefault();
         }
     }
 }

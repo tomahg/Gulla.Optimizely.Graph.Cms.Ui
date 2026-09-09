@@ -25,8 +25,9 @@
         <div class="gulla-form__field">
             <optimizely-content-tree id="content-tree"></optimizely-content-tree>
             <input id="gulla-pinned-target" type="hidden" />
-            @* Shown while editing: the component always mounts with no selection, so this is
-               the only way to tell the editor which content the pinned result currently points at. *@
+            @* Shown while editing: the component's own label always mounts empty and cannot be
+               seeded, so this names the content the pinned result currently points at. The tree
+               inside its dialog does open on that content — the JS rewrites the tree's requests. *@
             <div id="gulla-pinned-target-current" class="gulla-form__hint" hidden></div>
         </div>
     </div>

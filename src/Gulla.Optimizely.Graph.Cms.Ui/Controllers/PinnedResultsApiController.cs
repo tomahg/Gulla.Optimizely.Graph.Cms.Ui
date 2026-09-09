@@ -303,9 +303,10 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
 
             return Ok(new ContentMatch
             {
-                // "N" (no dashes) is the form Graph indexes as _metadata.key and matches
-                // pinned targetKey against — see GraphPinnedClient.NormalizeTargetKey.
-                ContentGuid = content.ContentGuid.ToString("N"),
+                // "D" (with dashes) is the form the CMS 12 sync client indexes as ContentLink.GuidValue
+                // and matches pinned targetKey against — see GraphPinnedClient.NormalizeTargetKey.
+                // The UI keys its name cache on this value, so it must equal the stored targetKey.
+                ContentGuid = content.ContentGuid.ToString("D"),
                 Name = content.Name,
                 Url = SafeUrl(content.ContentLink)
             });

@@ -15,7 +15,7 @@ When Optimizely retired Search & Navigation in favour of Optimizely Graph, the e
 | **1.x** (this branch) | CMS 12 | .NET 8 |
 | 2.x | CMS 13 | .NET 10 |
 
-The two lines are feature-identical. Only the CMS shell integration differs.
+The two lines are feature-identical. Only the CMS shell integration differs, plus the `targetKey` format Graph expects for pinned results (see Limitations).
 
 ## Requirements
 
@@ -222,7 +222,7 @@ inside the policy.
 
 ## Limitations (inherited from Optimizely Graph)
 
-- Pinned results target **internal CMS content only**. Graph's `targetKey` is a content GUID, so there is no way to pin an external link.
+- Pinned results target **internal CMS content only**. Graph's `targetKey` is a content GUID, so there is no way to pin an external link. On CMS 12 Graph matches it against `ContentLink.GuidValue`, the GUID **with** dashes, and this 1.x line sends that format. Versions 1.0.0 through 1.1.0 wrote the GUID without dashes, which Graph stores but never matches, so pinned items created with those versions are silently inactive: open each one in the UI and save it again to fix the key.
 - Pinned results display the content's own title/description. The pinned item carries no display fields to override them with.
 - When several pinned items share a phrase, Graph **shows only the top five**, ordered by priority. Storage isn't capped.
 - Graph matches a pinned item's `phrases` value as a single literal string. The comma-separated box in the UI is therefore split into one Graph item per phrase; a phrase cannot itself contain a comma.

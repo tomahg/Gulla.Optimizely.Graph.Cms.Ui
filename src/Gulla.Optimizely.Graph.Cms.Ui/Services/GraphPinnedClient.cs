@@ -117,14 +117,17 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
         }
 
         /// <summary>
-        /// Graph matches <c>targetKey</c> against the indexed document's <c>_metadata.key</c>, which
-        /// is the content GUID in "N" format — 32 hex digits, no dashes. A dashed GUID is accepted
-        /// and stored happily, then silently pins nothing: the query succeeds and simply ignores the
-        /// item, so there is no error anywhere to point at the cause.
+        /// Graph matches <c>targetKey</c> against the indexed document's key and does not normalize
+        /// it. Which key that is depends on the schema: the CMS 12 synchronization client indexes
+        /// <c>ContentLink.GuidValue</c>, the content GUID in "D" format — WITH dashes — so that is
+        /// what this CMS 12 line must send. (The CMS 13 / 2.x line matches <c>_metadata.key</c>,
+        /// which is dash-less "N".) The wrong format is accepted and stored happily, then silently
+        /// pins nothing: the query succeeds and simply ignores the item, so there is no error
+        /// anywhere to point at the cause. Verified 2026-09-09 against ContentGraph.Cms 4.4.4.
         /// </summary>
         private static string NormalizeTargetKey(string targetKey)
         {
-            return Guid.TryParse(targetKey, out var guid) ? guid.ToString("N") : targetKey;
+            return Guid.TryParse(targetKey, out var guid) ? guid.ToString("D") : targetKey;
         }
 
         private static async Task EnsureSuccessOrThrowWithBodyAsync(HttpResponseMessage response)

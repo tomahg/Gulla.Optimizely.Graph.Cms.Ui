@@ -13,6 +13,7 @@
         synonyms: null,
         langShares: null,
         targetResolve: null,
+        pickerPreselect: null,
         editingKey: null
     };
 
@@ -533,6 +534,7 @@
 
         $('gulla-pinned-filter').addEventListener('input', renderPinned);
 
+        hookContentTreeRequests();
         bindContentPicker();
     }
 
@@ -547,12 +549,14 @@
         $('gulla-pinned-priority').value = group.sample.priority == null ? '' : group.sample.priority;
         $("gulla-pinned-all-langs").checked = isAllLanguages(group.sample);
 
-        // The picker can't be pre-selected — <optimizely-content-tree> always mounts empty and
-        // exposes no way to seed it — so the current target is shown as text instead. Leaving
-        // it alone keeps that target; picking something new overwrites it.
+        // <optimizely-content-tree> exposes no way to seed its own selected-item label, so the
+        // current target is shown as text beside it. The tree behind its dialog CAN open on
+        // that target, though — see preselectPickerTarget. Leaving the picker alone keeps the
+        // target; picking something new overwrites it.
         resetContentPicker();
         $('gulla-pinned-target').value = group.sample.targetKey || '';
         showCurrentTarget(group.sample.targetKey);
+        preselectPickerTarget(group.sample.targetKey);
 
         setFormMode('edit');
         $('gulla-pinned-form').scrollIntoView({ block: 'nearest' });
@@ -581,7 +585,7 @@
         }
         var resolved = state.pinnedNames[targetKey];
         line.textContent = 'Currently: ' + (resolved ? resolved.name : targetKey) +
-            ' — pick again only if you want to change it';
+            ' — the picker opens on it; pick again only if you want to change it';
         line.hidden = false;
     }
 
@@ -791,7 +795,89 @@
     function clearPickerSelection() {
         $('gulla-pinned-target').value = '';
         state.targetResolve = null;
+        state.pickerPreselect = null;
         showCurrentTarget(null);
+    }
+
+    // Remembers which node the tree should open on, as the content reference the tree itself
+    // uses for node ids. The GUID Graph stores is not that, so it goes through the same
+    // resolve call that names the list — the answer is usually already cached from there.
+    function preselectPickerTarget(targetKey) {
+        state.pickerPreselect = null;
+        if (!targetKey) return;
+
+        var cached = state.pinnedNames[targetKey];
+        if (cached) {
+            state.pickerPreselect = cached.contentLink || null;
+            return;
+        }
+
+        fetch(api('/pinned/resolve-content') + '?guid=' + encodeURIComponent(targetKey))
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (resolved) {
+                if (!resolved || !resolved.contentGuid) return;
+                state.pinnedNames[resolved.contentGuid] = resolved;
+                // Only if this is still the target being edited — the editor may have moved on.
+                if ($('gulla-pinned-target').value === targetKey) {
+                    state.pickerPreselect = resolved.contentLink || null;
+                }
+            })
+            .catch(function () { /* the tree simply opens unselected */ });
+    }
+
+    // ------- Steering Optimizely's tree by rewriting its requests -------
+
+    // The element takes one attribute, id, yet the dialog behind it already supports a
+    // pages-only tree and a pre-selected node. Both are decided entirely by the URL it fetches:
+    //
+    //   {cms}/ContentTree/GetContentTreeNodes/{id}?selected={contentLink}
+    //
+    // GetPageTreeNodes is the sibling action that returns PageData only — no asset folders,
+    // blocks or media — and `selected` makes the server return the branch down to that node
+    // pre-expanded, which the tree then highlights. Since the component passes neither
+    // through, the request is rewritten on its way out instead. CMS 12's bundle goes through
+    // axios over XMLHttpRequest, CMS 13's calls fetch, so both are hooked and the same file
+    // serves both lines. If Optimizely ever changes the URL shape the pattern matches nothing
+    // and the picker is back to its stock behaviour, no worse than before.
+    var TREE_REQUEST = /^(.*\/ContentTree\/)Get(?:Content|Page)TreeNodes(\/[^?#]*)?(?:\?([^#]*))?$/;
+
+    function steerTreeRequest(url) {
+        if (typeof url !== 'string' || url.indexOf('/ContentTree/') < 0) return url;
+        var m = TREE_REQUEST.exec(url);
+        if (!m) return url;
+
+        var params = new URLSearchParams(m[3] || '');
+        params.set('excludeWasteBasket', 'true');
+        // Once the editor has picked something the component sends its own `selected`, and
+        // that must win — ours only fills the gap on a fresh mount.
+        if (!params.has('selected') && state.pickerPreselect) {
+            params.set('selected', state.pickerPreselect);
+        }
+        return m[1] + 'GetPageTreeNodes' + (m[2] || '') + '?' + params.toString();
+    }
+
+    function hookContentTreeRequests() {
+        if (window.__gullaTreeHooked) return;
+        window.__gullaTreeHooked = true;
+
+        var nativeOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (method, url) {
+            var args = Array.prototype.slice.call(arguments);
+            args[1] = steerTreeRequest(url);
+            return nativeOpen.apply(this, args);
+        };
+
+        if (typeof window.fetch === 'function') {
+            var nativeFetch = window.fetch;
+            window.fetch = function (input, init) {
+                if (typeof input === 'string') {
+                    input = steerTreeRequest(input);
+                } else if (typeof URL !== 'undefined' && input instanceof URL) {
+                    input = steerTreeRequest(input.toString());
+                }
+                return nativeFetch.call(window, input, init);
+            };
+        }
     }
 
     // The component holds its selection in React state, so form.reset() leaves the previous

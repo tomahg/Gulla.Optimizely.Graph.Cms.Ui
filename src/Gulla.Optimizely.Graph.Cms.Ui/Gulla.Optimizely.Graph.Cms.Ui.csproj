@@ -6,10 +6,10 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <Version>1.1.1</Version>
-    <PackageVersion>1.1.1</PackageVersion>
-    <AssemblyVersion>1.1.1</AssemblyVersion>
-    <FileVersion>1.1.1</FileVersion>
+    <Version>1.1.2</Version>
+    <PackageVersion>1.1.2</PackageVersion>
+    <AssemblyVersion>1.1.2</AssemblyVersion>
+    <FileVersion>1.1.2</FileVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <PackageId>Gulla.Optimizely.Graph.Cms.Ui</PackageId>
@@ -23,7 +23,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Fix pinned results never matching on CMS 12: targetKey is now the content GUID with dashes, as Graph's CMS 12 schema expects.</PackageReleaseNotes>
+    <PackageReleaseNotes>The content picker for pinned results now displays current content.</PackageReleaseNotes>
 
   </PropertyGroup>
 

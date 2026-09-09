@@ -274,6 +274,14 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
         public class ContentMatch
         {
             public string ContentGuid { get; set; }
+
+            /// <summary>
+            /// The version-less content reference, in the form Optimizely's content tree uses
+            /// for its node ids. The UI hands it back to the tree as <c>?selected=</c> so the
+            /// picker opens on the content a pinned result already points at.
+            /// </summary>
+            public string ContentLink { get; set; }
+
             public string Name { get; set; }
             public string Url { get; set; }
         }
@@ -307,6 +315,7 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Controllers
                 // and matches pinned targetKey against — see GraphPinnedClient.NormalizeTargetKey.
                 // The UI keys its name cache on this value, so it must equal the stored targetKey.
                 ContentGuid = content.ContentGuid.ToString("D"),
+                ContentLink = content.ContentLink.ToReferenceWithoutVersion().ToString(),
                 Name = content.Name,
                 Url = SafeUrl(content.ContentLink)
             });

@@ -65,6 +65,8 @@ After install, log in to the CMS as an administrator, open the product menu in t
 - **Pinned Results** — pin specific CMS content to the top of the search results for chosen phrases. Organised into collections, scoped per site and per language. Previously called Best Bets in Search & Navigation.
 - **Synonyms** — define one-way (`a => b`) and bidirectional (`a <=> b`) term equivalences. Scoped per language and per slot. Import/export the Search & Navigation CSV format (`phrase,bidirectional,synonym`) directly.
 
+The **Target content** picker on the Pinned Results form is Optimizely's own content tree, trimmed to pages: asset folders, blocks and media never appear. When you edit an existing pinned result the tree opens with its current target selected and expanded, so you can see what it points at before deciding whether to change it.
+
 If you would rather have the addon as a product of its own — a **Graph** entry in the product switcher with its own left menu — set `MenuParentPath` to an empty string (see [Configuration](#configuration)). That is also what you get automatically when the `Optimizely.ContentGraph.Cms` package is not installed, since the menu to nest under does not exist.
 
 ### Scoping

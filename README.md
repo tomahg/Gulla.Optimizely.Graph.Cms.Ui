@@ -6,6 +6,8 @@ A familiar Search & Navigation–style admin UI for **Optimizely CMS 12** that l
 
 When Optimizely retired Search & Navigation in favour of Optimizely Graph, the editor UI for Best Bets and Synonyms went with it. This package brings that UI back, talking to Graph's REST APIs under the hood.
 
+![Pinned Results tab in the Optimizely CMS admin UI](img/ui.png)
+
 ## Which version do I need?
 
 | Package version | Optimizely CMS | .NET |

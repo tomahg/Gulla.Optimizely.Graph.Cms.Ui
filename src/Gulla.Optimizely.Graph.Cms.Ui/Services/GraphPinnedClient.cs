@@ -66,13 +66,51 @@ namespace Gulla.Optimizely.Graph.Cms.Ui.Services
 
         // ---- Items ----
 
+        /// <summary>
+        /// Graph answers <c>GET api/pinned/collections/{id}/items</c> with at most 20 items, and
+        /// offers no way to ask for more: <c>pageSize</c>, <c>limit</c>, <c>top</c>, <c>take</c>,
+        /// <c>$top</c>, <c>count</c> and a dozen other spellings are all accepted and then
+        /// silently ignored. <c>offset</c> is the one parameter it honours. Measured 2026-09-22
+        /// against a collection of 159 items: offsets 0..140 answered 20, 20, 20, 20, 20, 20, 20,
+        /// 19 — 159 items with 159 distinct ids. The page size is the server's, not ours; raising
+        /// this number does nothing.
+        /// </summary>
+        private const int ItemPageSize = 20;
+
+        /// <summary>
+        /// Stops the paging loop if a server ever returns full pages without honouring
+        /// <c>offset</c>, which would otherwise page forever. Far above any real collection.
+        /// </summary>
+        private const int MaxItemsPerCollection = 10000;
+
         public async Task<IReadOnlyList<PinnedResult>> ListAsync(string collectionId, string language)
         {
-            var response = await _httpClient.GetAsync($"api/pinned/collections/{collectionId}/items");
-            await EnsureSuccessOrThrowWithBodyAsync(response);
+            // The response carries no total, no next link and no header saying it was cut off, so
+            // a truncated page is indistinguishable from a whole collection. Page until a short
+            // page comes back.
+            var items = new List<PinnedResult>();
 
-            var items = await response.Content.ReadFromJsonAsync<List<PinnedResult>>() ?? new List<PinnedResult>();
+            for (var offset = 0; offset < MaxItemsPerCollection; offset += ItemPageSize)
+            {
+                var response = await _httpClient.GetAsync($"api/pinned/collections/{collectionId}/items?offset={offset}");
+                await EnsureSuccessOrThrowWithBodyAsync(response);
 
+                var page = await response.Content.ReadFromJsonAsync<List<PinnedResult>>();
+                if (page == null || page.Count == 0)
+                {
+                    break;
+                }
+
+                items.AddRange(page);
+
+                if (page.Count < ItemPageSize)
+                {
+                    break;
+                }
+            }
+
+            // Filter once the whole set is in. Filtering per page would let a language vanish from
+            // the list only because the first page happened to hold none of it.
             var normalized = LanguageNormalizer.ToIsoCode(language);
             if (!string.IsNullOrWhiteSpace(normalized))
             {
